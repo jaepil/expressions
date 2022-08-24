@@ -1,0 +1,7 @@
+src:*/include/boost/smart_ptr/detail/*
+src:*/include/boost/program_options/variables_map.hpp
+
+[undefined]
+fun:*fmt*v8*detail*
+src:*/include/boost/any.hpp
+src:*/include/*
