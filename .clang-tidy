@@ -1,0 +1,104 @@
+Checks: "bugprone-*,\
+    -bugprone-branch-clone,\
+    -bugprone-exception-escape,\
+    -bugprone-reserved-identifier,\
+    -bugprone-easily-swappable-parameters,\
+    cppcoreguidelines-*,\
+    -cppcoreguidelines-pro-bounds-pointer-arithmetic,\
+    -cppcoreguidelines-pro-type-vararg,\
+    -cppcoreguidelines-prefer-member-initializer,\
+    -cppcoreguidelines-avoid-goto,\
+    -cppcoreguidelines-avoid-magic-numbers,\
+    -cppcoreguidelines-non-private-member-variables-in-classes,\
+    -cppcoreguidelines-special-member-functions,\
+    -cppcoreguidelines-macro-usage,\
+    -cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
+    -cppcoreguidelines-avoid-c-arrays,\
+    -cppcoreguidelines-pro-type-reinterpret-cast,\
+    -cppcoreguidelines-owning-memory,\
+    readability-*,\
+    -readability-identifier-length,\
+    -readability-function-cognitive-complexity,\
+    -readability-uppercase-literal-suffix,\
+    -readability-magic-numbers,\
+    -readability-else-after-return,\
+    -readability-implicit-bool-conversion,\
+    -readability-redundant-member-init,\
+    -readability-redundant-access-specifiers,\
+    -readability-named-parameter,\
+    -readability-simplify-boolean-expr,\
+    -readability-convert-member-functions-to-static,\
+    -readability-use-anyofallof,\
+    -readability-suspicious-call-argument,\
+    modernize-*,\
+    -modernize-use-nodiscard,\
+    -modernize-pass-by-value,\
+    -modernize-avoid-c-arrays,\
+    -modernize-use-trailing-return-type,\
+    -modernize-concat-nested-namespaces,\
+    performance-*,\
+    clang-analyzer-*,\
+    -clang-analyzer-unix.cstring.NullArg,\
+    -clang-analyzer-cplusplus.NewDelete,\
+    -clang-analyzer-core.NullDereference,\
+    boost-*"
+
+CheckOptions:
+    - key: readability-identifier-naming.NamespaceCase
+      value: lower_case
+
+    - key: readability-identifier-naming.ClassCase
+      value: aNy_CasE
+
+    - key: readability-identifier-naming.ClassMethodCase
+      value: lower_case
+    - key: readability-identifier-naming.ClassMemberCase
+      value: lower_case
+
+    - key: readability-identifier-naming.MethodCase
+      value: lower_case
+    - key: readability-identifier-naming.PrivateMethodCase
+      value: lower_case
+    - key: readability-identifier-naming.PrivateMethodSuffix
+      value: _
+    - key: readability-identifier-naming.ProtectedMethodCase
+      value: lower_case
+    - key: readability-identifier-naming.ProtectedMethodSuffix
+      value: _
+
+    - key: readability-identifier-naming.MemberCase
+      value: lower_case
+    - key: readability-identifier-naming.PrivateMemberCase
+      value: lower_case
+    - key: readability-identifier-naming.PrivateMemberSuffix
+      value: _
+    - key: readability-identifier-naming.ProtectedMemberCase
+      value: lower_case
+    - key: readability-identifier-naming.ProtectedMemberSuffix
+      value: _
+
+    - key: readability-identifier-naming.FunctionCase
+      value: lower_case
+    - key: readability-identifier-naming.ParameterCase
+      value: lower_case
+    - key: readability-identifier-naming.ConstantParameterCase
+      value: lower_case
+    # - key: readability-identifier-naming.VariableCase
+    #  value: lower_case
+
+    - key: readability-identifier-naming.UnionCase
+      value: CamelCase
+
+    - key: readability-identifier-naming.EnumCase
+      value: CamelCase
+    - key: readability-identifier-naming.EnumConstantCase
+      value: CamelCase
+    - key: readability-identifier-naming.EnumConstantPrefix
+      value: k
+
+    - key: readability-identifier-naming.ConstantCase
+      value: CamelCase
+    - key: readability-identifier-naming.ConstantPrefix
+      value: k
+
+HeaderFilterRegex: "expressions/(src|tests)/expressions/.*\\.hpp$"
