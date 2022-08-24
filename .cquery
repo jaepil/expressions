@@ -1,0 +1,24 @@
+%clang
+%c -std=gnu23
+%cpp -std=gnu++2b
+
+-I/usr/local/include
+-I/usr/local/opt/llvm/include
+-I/usr/local/opt/llvm/include/c++/v1
+
+-I/opt/homebrew/include
+-I/opt/homebrew/opt/llvm/include
+-I/opt/homebrew/opt/llvm/include/c++/v1
+
+-Ideps/include
+-Ideps
+-Isrc
+-Itests
+
+-DWITH_TESTS
+
+-DBACKWARD_HAS_LIBUNWIND=1
+
+# -DENABLE_BOOST_STACK_TRACE
+-DBOOST_MPL_CFG_NO_PREPROCESSED_HEADERS
+-DBOOST_MPL_LIMIT_LIST_SIZE=50
