@@ -8,6 +8,7 @@
 #define __EXPRESSIONS_COMMON_BOX_HPP__
 
 #include <memory>
+#include <type_traits>
 
 
 namespace expressions {
@@ -15,6 +16,8 @@ namespace expressions {
 template<typename T>
 class Box {
 public:
+    Box() requires std::is_default_constructible_v<T> : Box(T {}) {
+    }
     Box(T&& obj) : impl_(std::make_unique<T>(std::move(obj))) {
     }
     Box(const T& obj) : impl_(std::make_unique<T>(obj)) {
