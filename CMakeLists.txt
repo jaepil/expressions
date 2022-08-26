@@ -22,13 +22,13 @@ cmake_policy(SET CMP0063 NEW)
 # RPATH settings on macOS do not affect install_name.
 # https://cmake.org/cmake/help/latest/policy/CMP0068.html
 if (POLICY CMP0068)
-  cmake_policy(SET CMP0068 NEW)
+    cmake_policy(SET CMP0068 NEW)
 endif()
 
 # find_package() uses <PackageName>_ROOT variables.
 # https://cmake.org/cmake/help/latest/policy/CMP0074.html
 if (POLICY CMP0074)
-  cmake_policy(SET CMP0074 NEW)
+    cmake_policy(SET CMP0074 NEW)
 endif()
 
 # Support Position Independent Executable (PIE) and CheckPIESupported().
