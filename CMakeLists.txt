@@ -1,3 +1,9 @@
+#
+# Expressions
+#
+# Copyright (c) 2022 Jaepil Jeong <jaepil@appspand.com>
+#
+
 cmake_minimum_required(VERSION 3.15)
 
 project(expressions LANGUAGES C CXX)
