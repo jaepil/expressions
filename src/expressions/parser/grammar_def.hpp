@@ -84,8 +84,6 @@ using lambda_expr_type = x3::rule<struct lambda_expr_class, ast::Lambda>;
 using bool_expr_type = x3::rule<struct bool_expr_class, ast::BoolOp>;
 using bool_expr_or_type = x3::rule<struct bool_expr_or_class, ast::BoolOp>;
 using bool_expr_and_type = x3::rule<struct bool_expr_and_class, ast::BoolOp>;
-using bool_expr_should_type
-    = x3::rule<struct bool_expr_should_class, ast::BoolOp>;
 using unary_expr_type = x3::rule<struct unary_expr_class, ast::Value>;
 
 using compare_ops_type = x3::rule<struct compare_ops_class, ast::CompareOpType>;
@@ -166,7 +164,6 @@ static const lambda_expr_type lambda_expr {"lambda_expr"};
 static const bool_expr_type bool_expr {"bool_expr"};
 static const bool_expr_or_type bool_expr_or {"bool_expr_or"};
 static const bool_expr_and_type bool_expr_and {"bool_expr_and"};
-static const bool_expr_should_type bool_expr_should {"bool_expr_should"};
 static const unary_expr_type unary_expr {"unary_expr"};
 
 static const compare_ops_type compare_ops {"compare_ops"};
@@ -465,28 +462,21 @@ static const auto bool_expr_def
 
 static const auto bool_expr_or_def
     = x3::attr(ast::BoolOpType::kOr) >> (
-        bool_expr_and % x3::no_case[bool_op_or]
+        bool_expr_and % bool_op_or
     )
     ;
 
 static const auto bool_expr_and_def
     = x3::attr(ast::BoolOpType::kAnd) >> (
-        bool_expr_should % x3::no_case[bool_op_and]
+        compare_op_expr % bool_op_and
     )
-    ;
-
-static const auto bool_expr_should_def
-    = x3::attr(ast::BoolOpType::kDefault) >> +compare_op_expr
     ;
 
 static const auto compare_ops_def
     = compare_op
-    | x3::no_case[
-        x3::distinct("in") >> x3::attr(ast::CompareOpType::kIn)
-    ] | x3::no_case[
-        x3::distinct("not") >> x3::distinct("in")
+    | x3::distinct("in") >> x3::attr(ast::CompareOpType::kIn)
+    | x3::distinct("not") >> x3::distinct("in")
             >> x3::attr(ast::CompareOpType::kNotIn)
-    ]
     ;
 
 static const auto compare_op_expr_def
@@ -782,11 +772,11 @@ BOOST_SPIRIT_DEFINE(
     return_statement, pass_statement, break_statement, continue_statement,
     statement_list, alias_target, alias_targets, aliased_expression,
     chained_expression, expression, lambda_expr, bool_expr, bool_expr_or,
-    bool_expr_and, bool_expr_should, unary_expr, compare_ops, compare_op_expr,
-    bin_op_expr, bin_op_additive_expr, bin_op_multiplicative_expr,
-    bin_op_exponential_expr, primary, call, argument, keyword_argument,
-    argument_list, named_expression, named_expression_list, atom, numbers, id,
-    token, quoted_string, sequence, group, tuple, list, dict, dict_item, set)
+    bool_expr_and, unary_expr, compare_ops, compare_op_expr, bin_op_expr,
+    bin_op_additive_expr, bin_op_multiplicative_expr, bin_op_exponential_expr,
+    primary, call, argument, keyword_argument, argument_list, named_expression,
+    named_expression_list, atom, numbers, id, token, quoted_string, sequence,
+    group, tuple, list, dict, dict_item, set)
 
 struct error_handler {
     template<typename Iterator, typename Exception, typename Context>
