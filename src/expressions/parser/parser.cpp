@@ -9,6 +9,9 @@
 #include <expressions/ast/ast.hpp>
 #include <expressions/parser/grammar.hpp>
 
+#include <expressions/parser/transform/bin_op_transformer.hpp>
+#include <expressions/parser/transform/bool_op_transformer.hpp>
+
 #include <expressions/support/boost/spirit.hpp>
 
 
@@ -52,7 +55,13 @@ bool ExpressionsParser::parse_to_tree_(const std::string_view& input,
 }
 
 bool ExpressionsParser::transform_tree_(ast::Entry& tree) const {
-    (void)tree;
+    auto new_tree = BinOpTransformer {}.transform(tree);
+    new_tree = BoolOpTransformer {}.transform(new_tree);
+    if (!ast::holds_alternative<ast::Entry>(new_tree)) {
+        return false;
+    }
+
+    tree = ast::get<ast::Entry>(new_tree);
 
     return true;
 }
