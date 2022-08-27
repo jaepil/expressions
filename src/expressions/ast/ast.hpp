@@ -80,12 +80,10 @@ enum class BoolOpType : int32_t {
 
     kAnd,
     kOr,
-    kShould,
 
     kNot,
     kPlus,
     kMinus,
-    kFilter,
 };
 
 enum class CompareOpType : int32_t {
