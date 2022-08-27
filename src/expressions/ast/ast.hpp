@@ -80,10 +80,7 @@ enum class BoolOpType : int32_t {
 
     kAnd,
     kOr,
-
     kNot,
-    kPlus,
-    kMinus,
 };
 
 enum class CompareOpType : int32_t {

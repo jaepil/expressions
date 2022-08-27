@@ -203,8 +203,6 @@ static const set_type set {"set"};
 // grammar rule construction
 static const auto unary_op = x3::symbols<ast::BoolOpType> {
     {"!", ast::BoolOpType::kNot},
-    {"+", ast::BoolOpType::kPlus},
-    {"-", ast::BoolOpType::kMinus},
 };
 static const auto unary_op_not = x3::symbols<ast::BoolOpType> {
     {"not", ast::BoolOpType::kNot},

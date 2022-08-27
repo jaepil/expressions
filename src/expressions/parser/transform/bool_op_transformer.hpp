@@ -42,7 +42,7 @@ public:
     }
 
 private:
-    ast::BoolOpType op_type_ {ast::BoolOpType::kShould};
+    ast::BoolOpType op_type_ {ast::BoolOpType::kAnd};
 };
 
 }    // namespace expressions::parser
