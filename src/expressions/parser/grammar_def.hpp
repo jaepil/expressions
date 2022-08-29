@@ -310,7 +310,7 @@ static const auto entry_def
     ;
 
 static const auto package_name_def
-    = "package" > (id % x3::lit('.')) > x3::lit(';')
+    = "package" > (id % x3::lit('.')) > *x3::lit(';')
     ;
 
 static const auto compound_stmt_lookahead
