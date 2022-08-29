@@ -34,6 +34,7 @@ namespace x3 = boost::spirit::x3;
 
 // type declaration
 using entry_type = x3::rule<struct entry_class, ast::Entry>;
+using package_name_type = x3::rule<struct package_name_class, ast::PackageName>;
 using statement_type = x3::rule<struct statement_class, ast::Value>;
 
 using compound_statement_type
@@ -76,8 +77,6 @@ using alias_target_type = x3::rule<struct alias_target_class, ast::List>;
 using alias_targets_type = x3::rule<struct alias_targets_class, ast::Value>;
 using aliased_expression_type
     = x3::rule<struct aliased_expression_class, ast::AliasedExpression>;
-using chained_expression_type
-    = x3::rule<struct chained_expression_class, ast::ChainedExpression>;
 using expression_type = x3::rule<struct expression_class, ast::Value>;
 using lambda_expr_type = x3::rule<struct lambda_expr_class, ast::Lambda>;
 
@@ -110,7 +109,6 @@ using named_expr_list_type
 using atom_type = x3::rule<struct atom_class, ast::Value>;
 using numbers_type = x3::rule<struct numbers_class, ast::Value>;
 using id_type = x3::rule<struct id_class, ast::Name>;
-using token_type = x3::rule<struct token_class, ast::String>;
 using quoted_string_type
     = x3::rule<struct quoted_string_class, ast::QuotedString>;
 
@@ -124,6 +122,7 @@ using set_type = x3::rule<struct set_class, ast::Set>;
 
 // type definition
 static const entry_type entry {"entry"};
+static const package_name_type package_name {"package_name"};
 static const statement_type statement {"statement"};
 
 static const compound_statement_type compound_statement {"compound_statement"};
@@ -157,7 +156,6 @@ static const statement_list_type statement_list {"statement_list"};
 static const alias_target_type alias_target {"alias_target"};
 static const alias_targets_type alias_targets {"alias_targets"};
 static const aliased_expression_type aliased_expression {"aliased_expression"};
-static const chained_expression_type chained_expression {"chained_expression"};
 static const expression_type expression {"expression"};
 static const lambda_expr_type lambda_expr {"lambda_expr"};
 
@@ -188,7 +186,6 @@ static const named_expr_list_type named_expression_list {
 static const atom_type atom {"atom"};
 static const numbers_type numbers {"numbers"};
 static const id_type id {"id"};
-static const token_type token {"token"};
 static const quoted_string_type quoted_string {"quoted_string"};
 
 static const sequence_type sequence {"sequence"};
@@ -245,16 +242,13 @@ static const auto exponential_op = x3::symbols<ast::BinOpType> {
     {"**", ast::BinOpType::kPow},
 };
 
-static const auto chain_op = x3::symbols<ast::Symbol> {
-    {"|>", ast::Symbol {"|>"}},
-    {"<|", ast::Symbol {"<|"}},
-};
-
 static const auto alias_op = x3::symbols<ast::AliasType> {
     {"as", ast::AliasType::kAs},
 };
 
 static const auto reserved = x3::symbols<std::string_view> {
+    "package",
+
     "import",
     "from",
 
@@ -307,13 +301,16 @@ static const auto keywords
     = unary_op | bin_ops
     | x3::distinct(unary_op_not)
     | x3::distinct(bool_op_and | bool_op_or)
-    | chain_op
     | x3::distinct(alias_op)
     | x3::distinct(reserved)
     ;
 
 static const auto entry_def
-    = statement_list
+    = package_name >> -statement_list
+    ;
+
+static const auto package_name_def
+    = "package" > (id % x3::lit('.')) > x3::lit(';')
     ;
 
 static const auto compound_stmt_lookahead
@@ -366,8 +363,8 @@ static const auto for_iteration_def
 
 static const auto classic_for_statement_def
     = "for" >> x3::confix('(', ')')[
-            for_init >> ';' >> for_condition >> ';' >> for_iteration
-        ] >> statement_body >> -(x3::distinct("else") >> statement_body)
+        for_init >> ';' >> for_condition >> ';' >> for_iteration
+    ] >> statement_body >> -(x3::distinct("else") >> statement_body)
     ;
 
 static const auto for_target_def
@@ -383,8 +380,8 @@ static const auto for_targets_def
 
 static const auto range_based_for_statement_def
     = "for" >> x3::confix('(', ')')[
-            for_targets >> ':' >> expression
-        ] >> statement_body >> -(x3::distinct("else") >> statement_body)
+        for_targets >> ':' >> expression
+    ] >> statement_body >> -(x3::distinct("else") >> statement_body)
     ;
 
 static const auto while_statement_def
@@ -396,8 +393,7 @@ static const auto simple_statement_def
     = assign_statement
     | lazy_assign_statement
     | aug_assign_statement
-    | expression >> !x3::distinct(x3::lit("|>") | alias_op)
-    | chained_expression
+    | expression >> !x3::distinct(alias_op)
     | return_statement
     | pass_statement
     | break_statement
@@ -430,10 +426,6 @@ static const auto break_statement_def
 
 static const auto continue_statement_def
     = x3::distinct("continue") >> *x3::lit(';')
-    ;
-
-static const auto chained_expression_def
-    = expression >> +(x3::omit[chain_op] >> expression)
     ;
 
 static const auto sequence_lookahead
@@ -476,24 +468,24 @@ static const auto compare_ops_def
     = compare_op
     | x3::distinct("in") >> x3::attr(ast::CompareOpType::kIn)
     | x3::distinct("not") >> x3::distinct("in")
-            >> x3::attr(ast::CompareOpType::kNotIn)
+        >> x3::attr(ast::CompareOpType::kNotIn)
     ;
 
 static const auto compare_op_expr_def
-    = bin_op_expr >> !x3::distinct(alias_op) >> *(compare_ops >> bin_op_expr)
+    = bin_op_expr >> !x3::distinct(alias_op) >> *(compare_ops > bin_op_expr)
     | bin_op_expr >> !x3::distinct(alias_op)
     | aliased_expression
     ;
 
 static const auto alias_target_def
-    = x3::confix('(', ')')[(quoted_string | token) % ',']
-    | x3::confix('[', ']')[(quoted_string | token) % ',']
+    = x3::confix('(', ')')[(quoted_string | id) % ',']
+    | x3::confix('[', ']')[(quoted_string | id) % ',']
     ;
 
 static const auto alias_targets_def
     = &(x3::lit('(') | x3::lit('[')) >> alias_target
     | quoted_string
-    | token
+    | id
     ;
 
 static const auto aliased_expression_def
@@ -505,7 +497,7 @@ static const auto bin_op_expr_def
     ;
 
 static const auto bin_op_additive_expr_def
-    = bin_op_multiplicative_expr >> *(additive_op >> bin_op_multiplicative_expr)
+    = bin_op_multiplicative_expr >> *(additive_op > bin_op_multiplicative_expr)
     | bin_op_multiplicative_expr
     ;
 
@@ -513,37 +505,26 @@ static const auto bin_op_multiplicative_expr_def
     = bin_op_exponential_expr
         >> *(
             (!exponential_op >> multiplicative_op)
-            >> bin_op_exponential_expr
+            > bin_op_exponential_expr
         )
     | bin_op_exponential_expr
     ;
 
 static const auto bin_op_exponential_expr_def
     = unary_expr >> !exponential_op
-    | unary_expr >> *(exponential_op >> unary_expr)
+    | unary_expr >> *(exponential_op > unary_expr)
     ;
 
 static const auto unary_expr_def
     = (
         // not a
-        &unary_op_not >> (unary_op_not >> primary)
+        &unary_op_not >> (unary_op_not > primary)
     ) | (
         // +a, -a, !a, #a
         &unary_op >> (
             x3::lexeme[
                 unary_op >> !x3::unicode::space
-            ] >> primary
-        )
-    ) | (
-        // + a, - a, ! a, # a
-        // If there are spaces between the operator and term, treat the
-        // operator as a string.
-        &unary_op >> (
-            x3::as<ast::String>[
-                x3::lexeme[
-                    +(x3::char_ - x3::unicode::space)
-                ]
-            ]
+            ] > primary
         )
     ) | primary
     ;
@@ -562,7 +543,6 @@ static const auto keyword_argument_def
     = id >> '=' >> (
         (&x3::lit('(') >> lambda_expr)
         | unary_expr
-        | chain_op
     )
     ;
 
@@ -677,18 +657,6 @@ static const auto sequence_def
     | (dict | set)
     ;
 
-static const auto symbol
-    = x3::as<ast::String>[
-        x3::no_skip[
-            x3::raw[
-                +x3::unicode::digit
-                >> +x3::unicode::alpha
-                >> *x3::unicode::alnum
-            ]
-        ]
-    ]
-    ;
-
 static const auto number_lookahead
     = x3::strict_double
     | x3::distinct(x3::lit('0'))
@@ -699,12 +667,11 @@ static const auto atom_def
     = !keywords >> (
         (&date_lookahead >> date_single)
         | (&date_lookahead >> date_range)
+        | id
         | null
         | boolean
-        | symbol
         | (&number_lookahead >> numbers)
         | named_expression_list
-        | token
         | quoted_string
         | (&sequence_lookahead >> sequence)
     )
@@ -713,18 +680,20 @@ static const auto atom_def
 static const auto id_def
     = x3::as<std::string>[
         x3::lexeme[
-            (x3::unicode::alpha | x3::char_('_') | x3::char_('.'))
-            >> *(x3::unicode::alnum | x3::char_('_') | x3::char_('.'))
+            (
+                (x3::unicode::alpha | x3::char_('_') | x3::char_('.'))
+                    >> *(x3::unicode::alnum | x3::char_('_') | x3::char_('.'))
+            )
         ]
     ]
     ;
 
-static const auto token_def
-    = x3::lexeme[+(((x3::char_ - special_chars) | escaped_chars) - x3::eol)]
-    ;
-
 static const auto quoted_string_def
-    = x3::lexeme['"' >> *((escaped_chars | x3::char_) - x3::char_('"')) >> '"']
+    = x3::lexeme[
+        '"' > *(
+            (escaped_chars | x3::char_) - x3::char_('"') - x3::eol
+        ) > '"'
+    ]
     ;
 
 static const auto group_def
@@ -762,21 +731,28 @@ static const auto set_def
         (expression % ',') >> -x3::lit(',')
     ]
     ;
+
+static const auto skipper
+    = x3::unicode::space
+    | (!x3::lit("//=") >> "//" >> x3::seek[x3::eol | x3::eoi])
+    ;
 // clang-format on
 
-BOOST_SPIRIT_DEFINE(
-    entry, compound_statement, simple_statement, if_statement, for_statement,
-    for_init, for_condition, for_iteration, classic_for_statement, for_target,
-    for_targets, range_based_for_statement, while_statement, statement,
-    assign_statement, lazy_assign_statement, aug_assign_statement,
-    return_statement, pass_statement, break_statement, continue_statement,
-    statement_list, alias_target, alias_targets, aliased_expression,
-    chained_expression, expression, lambda_expr, bool_expr, bool_expr_or,
-    bool_expr_and, unary_expr, compare_ops, compare_op_expr, bin_op_expr,
-    bin_op_additive_expr, bin_op_multiplicative_expr, bin_op_exponential_expr,
-    primary, call, argument, keyword_argument, argument_list, named_expression,
-    named_expression_list, atom, numbers, id, token, quoted_string, sequence,
-    group, tuple, list, dict, dict_item, set)
+BOOST_SPIRIT_DEFINE(entry, package_name, compound_statement, simple_statement,
+                    if_statement, for_statement, for_init, for_condition,
+                    for_iteration, classic_for_statement, for_target,
+                    for_targets, range_based_for_statement, while_statement,
+                    statement, assign_statement, lazy_assign_statement,
+                    aug_assign_statement, return_statement, pass_statement,
+                    break_statement, continue_statement, statement_list,
+                    alias_target, alias_targets, aliased_expression, expression,
+                    lambda_expr, bool_expr, bool_expr_or, bool_expr_and,
+                    unary_expr, compare_ops, compare_op_expr, bin_op_expr,
+                    bin_op_additive_expr, bin_op_multiplicative_expr,
+                    bin_op_exponential_expr, primary, call, argument,
+                    keyword_argument, argument_list, named_expression,
+                    named_expression_list, atom, numbers, id, quoted_string,
+                    sequence, group, tuple, list, dict, dict_item, set)
 
 struct error_handler {
     template<typename Iterator, typename Exception, typename Context>
@@ -784,17 +760,24 @@ struct error_handler {
                                       const Iterator& last, const Exception& e,
                                       const Context& context) {
         (void)first;
+        (void)last;
         (void)context;
 
-        auto message = fmt::format("Error: expecting: {}, here: \"{}\"",
-                                   e.which(), std::string {e.where(), last});
-        fmt::print("{}\n", message);
+        auto& error_handler = x3::get<x3::error_handler_tag>(context).get();
+        auto message = "Error! Expecting: " + e.which() + " here:";
+        error_handler(e.where(), message);
 
         return x3::error_handler_result::fail;
+
+        // auto message = fmt::format("Error: expecting: {}, here: \"{}\"",
+        //                            e.which(), std::string {e.where(), last});
+        // fmt::print("{}\n", message);
+
+        // return x3::error_handler_result::fail;
     }
 };
 
-struct expression_class : error_handler {};
+struct entry_class : error_handler, x3::annotate_on_success {};
 
 }    // namespace expressions::parser
 

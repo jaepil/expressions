@@ -11,8 +11,12 @@
 
 #include <expressions/parser/transform/bin_op_transformer.hpp>
 #include <expressions/parser/transform/bool_op_transformer.hpp>
+#include <expressions/parser/transform/compare_op_transformer.hpp>
 
 #include <expressions/support/boost/spirit.hpp>
+
+#include <functional>
+#include <iostream>
 
 
 namespace expressions::parser {
@@ -30,18 +34,26 @@ auto ExpressionsParser::parse_to_ast(const std::string_view& input) const
 bool ExpressionsParser::parse_to_tree_(const std::string_view& input,
                                        ast::Entry& output,
                                        bool transform) const {
-    const auto& parser = get_entry_rule();
-    auto tree = ast::Entry {};
+    auto begin = std::cbegin(input);
+    auto end = std::cend(input);
+    auto on_error = x3::error_handler<std::string_view::const_iterator> {
+        begin,
+        end,
+        std::cerr,
+    };
 
     // clang-format off
-    auto skipper = x3::unicode::space
-                 | (!x3::lit("//=") >> "//" >> x3::seek[x3::eol | x3::eoi])
-                 ;
+    const auto parser
+        = x3::with<x3::error_handler_tag>(std::ref(on_error))[
+            get_entry_rule()
+        ]
+        ;
     // clang-format on
 
-    auto result = x3::phrase_parse(std::begin(input), std::end(input), parser,
-                                   skipper, tree);
+    auto tree = ast::Entry {};
+    auto result = x3::phrase_parse(begin, end, parser, skipper, tree);
     if (!result) {
+        on_error(begin, "Error! Expecting end of input here: ");
         return false;
     }
 
@@ -56,6 +68,7 @@ bool ExpressionsParser::parse_to_tree_(const std::string_view& input,
 
 bool ExpressionsParser::transform_tree_(ast::Entry& tree) const {
     auto new_tree = BinOpTransformer {}.transform(tree);
+    new_tree = CompareOpTransformer {}.transform(new_tree);
     new_tree = BoolOpTransformer {}.transform(new_tree);
     if (!ast::holds_alternative<ast::Entry>(new_tree)) {
         return false;

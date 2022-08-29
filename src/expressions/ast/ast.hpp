@@ -29,6 +29,7 @@ using ::expressions::support::boost::get_if;
 struct MonoState {};
 struct Null {};
 struct Entry;
+struct PackageName;
 
 struct AssignStatement;
 struct LazyAssignStatement;
@@ -44,7 +45,6 @@ struct Break;
 struct Continue;
 
 struct Expression;
-struct ChainedExpression;
 struct AliasedExpression;
 struct Lambda;
 struct BoolOp;
@@ -61,7 +61,6 @@ struct NamedExpression;
 struct NamedExpressionList;
 
 struct Name;
-struct Symbol;
 struct QuotedString;
 struct String;
 struct Bool;
@@ -123,7 +122,7 @@ enum class BinOpType : int32_t {
 
 using AtomType
     = x3::variant<MonoState, Null, Bool, int64_t, uint64_t, double,
-                  x3::forward_ast<Symbol>, x3::forward_ast<Int64>,
+                  x3::forward_ast<Name>, x3::forward_ast<Int64>,
                   x3::forward_ast<UInt64>, x3::forward_ast<Double>,
                   x3::forward_ast<String>, x3::forward_ast<QuotedString>,
                   x3::forward_ast<Date>, x3::forward_ast<DateRange>>;
@@ -141,7 +140,6 @@ using ExpressionType
                   x3::forward_ast<NamedExpressionList>, x3::forward_ast<Call>,
                   x3::forward_ast<Argument>, x3::forward_ast<KeywordArgument>,
                   x3::forward_ast<Lambda>, x3::forward_ast<Expression>,
-                  x3::forward_ast<ChainedExpression>,
                   x3::forward_ast<AliasedExpression>>;
 
 using StatementType = x3::variant<
@@ -162,10 +160,9 @@ using Value = x3::variant<
 
     // Atom
     Null, Bool, int64_t, uint64_t, double, x3::forward_ast<Name>,
-    x3::forward_ast<Symbol>, x3::forward_ast<Int64>, x3::forward_ast<UInt64>,
-    x3::forward_ast<Double>, x3::forward_ast<String>,
-    x3::forward_ast<QuotedString>, x3::forward_ast<Date>,
-    x3::forward_ast<DateRange>,
+    x3::forward_ast<Int64>, x3::forward_ast<UInt64>, x3::forward_ast<Double>,
+    x3::forward_ast<String>, x3::forward_ast<QuotedString>,
+    x3::forward_ast<Date>, x3::forward_ast<DateRange>,
 
     // Collection
     x3::forward_ast<Tuple>, x3::forward_ast<List>, x3::forward_ast<Dict>,
@@ -182,7 +179,7 @@ using Value = x3::variant<
     x3::forward_ast<KeywordArgument>,
 
     x3::forward_ast<Lambda>, x3::forward_ast<Expression>,
-    x3::forward_ast<ChainedExpression>, x3::forward_ast<AliasedExpression>,
+    x3::forward_ast<AliasedExpression>,
 
     // Statement
     x3::forward_ast<AssignStatement>, x3::forward_ast<LazyAssignStatement>,
@@ -198,13 +195,9 @@ using Value = x3::variant<
     x3::forward_ast<Break>, x3::forward_ast<Continue>,
 
     // Entry
-    x3::forward_ast<Entry>>;
+    x3::forward_ast<PackageName>, x3::forward_ast<Entry>>;
 
 struct Name {
-    std::string value {};
-};
-
-struct Symbol {
     std::string value {};
 };
 
@@ -331,11 +324,6 @@ struct Expression {
     Value expr {};
 };
 
-struct ChainedExpression {
-    Value start {};
-    std::vector<Value> exprs {};
-};
-
 struct AliasedExpression {
     Value expr {};
     AliasType op {AliasType::kNone};
@@ -404,7 +392,13 @@ struct Break {};
 
 struct Continue {};
 
+struct PackageName {
+    std::vector<Name> path;
+    // std::string name;
+};
+
 struct Entry {
+    PackageName package {};
     Value node {};
 };
 
@@ -444,7 +438,6 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::BinOpIntermediate, first, rest)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Lambda, params, expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Expression, expr)
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ChainedExpression, start, exprs)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AliasedExpression, expr, op,
                           aliases)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AssignStatement, target, expr)
@@ -463,6 +456,8 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::RangeBasedForStatement, target,
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::WhileStatement, condition, body,
                           or_else)
 
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Entry, node)
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::PackageName, path)
+
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Entry, package, node)
 
 #endif

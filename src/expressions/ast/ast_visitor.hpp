@@ -72,9 +72,6 @@ public:
     ReturnType operator()(const Name& node) const {
         return get().return_(node);
     }
-    ReturnType operator()(const Symbol& node) const {
-        return get().return_(node);
-    }
     ReturnType operator()(const String& node) const {
         return get().return_(node);
     }
@@ -141,9 +138,6 @@ public:
     ReturnType operator()(const Expression& node) const {
         return get().return_(node);
     }
-    ReturnType operator()(const ChainedExpression& node) const {
-        return get().return_(node);
-    }
     ReturnType operator()(const AliasedExpression& node) const {
         return get().return_(node);
     }
@@ -189,6 +183,10 @@ public:
     ReturnType operator()(const Continue& node) const {
         (void)node;
 
+        return get().return_(node);
+    }
+
+    ReturnType operator()(const PackageName& node) const {
         return get().return_(node);
     }
 
@@ -247,9 +245,6 @@ public:
         return ReturnType {value};
     }
     ReturnType operator()(const Name& node) const {
-        return ReturnType {node};
-    }
-    ReturnType operator()(const Symbol& node) const {
         return ReturnType {node};
     }
     ReturnType operator()(const Int64& node) const {
@@ -397,16 +392,6 @@ public:
 
         return ReturnType {Expression {std::move(expr)}};
     }
-    ReturnType operator()(const ChainedExpression& node) const {
-        std::vector<Value> exprs;
-        exprs.reserve(node.exprs.size());
-        for (const auto& expr : node.exprs) {
-            exprs.emplace_back(visit(expr));
-        }
-
-        return ReturnType {
-            ChainedExpression {visit(node.start), std::move(exprs)}};
-    }
     ReturnType operator()(const AliasedExpression& node) const {
         return ReturnType {
             AliasedExpression {visit(node.expr), node.op, visit(node.aliases)}};
@@ -480,8 +465,12 @@ public:
         return ReturnType {Continue {}};
     }
 
+    ReturnType operator()(const PackageName& node) const {
+        return ReturnType {node};
+    }
+
     ReturnType operator()(const Entry& node) const {
-        return ReturnType {Entry {visit(node.node)}};
+        return ReturnType {Entry {node.package, visit(node.node)}};
     }
 };
 
