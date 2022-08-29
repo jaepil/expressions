@@ -47,9 +47,9 @@ draw = () => {
     for (y = 0; y < height; y += 1) {
         for (x = 0; x < width; x += 1) {
             is_head = is_on_circle(x, y, half_width, half_height, head_size,
-                                stroke_width, head_squash_y);
+                                   stroke_width, head_squash_y);
             is_left_eye = is_in_circle(x, y, eye_position_x, eye_position_y,
-                                    eye_size);
+                                       eye_size);
             is_right_eye = is_in_circle(x, y, (width - eye_position_x - 1),
                                         eye_position_y, eye_size);
             is_mouth = is_on_circle(x, y, mouth_position_x, mouth_position_y,
