@@ -11,13 +11,18 @@
 #include <expressions/common/visitor.hpp>
 
 #include <fmt/format.h>
+#include <fmt/std.h>
 
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include <variant>
 
 
-int32_t execute_script(const std::string_view& input) {
+using ExitValueType = std::variant<std::monostate, bool, int32_t, int64_t,
+                                   uint32_t, uint64_t, double, std::string>;
+
+auto execute_script(const std::string_view& input) -> ExitValueType {
     using namespace expressions;
 
     auto ifs = std::ifstream {input, std::ios::in};
@@ -26,47 +31,50 @@ int32_t execute_script(const std::string_view& input) {
     }
     auto code = std::string {};
     std::getline(ifs, code, static_cast<char>(std::char_traits<char>::eof()));
-    fmt::print("{}", code);
 
     auto parser = parser::ExpressionsParser {};
     auto tree = parser.parse_to_ast(code);
+    if (!tree) {
+        return 1;
+    }
 
     auto interp = interpreter::ASTInterpreter {};
     auto result = interp.execute(*tree);
 
     auto v = SelfVisitableVisitor {
-        [](auto&&, interpreter::Null) {
-            return std::string {"null"};
+        [](auto&&, interpreter::Null) -> ExitValueType {
+            return std::monostate {};
         },
-        [](auto&&, bool value) {
-            return fmt::format("{}", value);
+        [](auto&&, bool value) -> ExitValueType {
+            return value;
         },
-        [](auto&&, int64_t value) {
-            return fmt::format("{}", value);
+        [](auto&&, int64_t value) -> ExitValueType {
+            return value;
         },
-        [](auto&&, uint64_t value) {
-            return fmt::format("{}", value);
+        [](auto&&, uint64_t value) -> ExitValueType {
+            return value;
         },
-        [](auto&&, double value) {
-            return fmt::format("{}", value);
+        [](auto&&, double value) -> ExitValueType {
+            return value;
         },
-        [](auto&&, const interpreter::Name& value) {
+        [](auto&&, const interpreter::Name& value) -> ExitValueType {
             return value.value;
         },
-        [](auto&&, const interpreter::String& value) {
+        [](auto&&, const interpreter::String& value) -> ExitValueType {
             return fmt::format("\"{}\"", value.value);
         },
-        [](auto&&, const interpreter::Date& value) {
+        [](auto&&, const interpreter::Date& value) -> ExitValueType {
             return fmt::format("{:04}-{:02}-{:02}", value.year, value.month,
                                value.day);
         },
-        [](auto&&, const interpreter::DateRange& value) {
+        [](auto&&, const interpreter::DateRange& value) -> ExitValueType {
             return fmt::format("{:04}-{:02}-{:02}-{:04}-{:02}-{:02}",
                                value.begin.year, value.begin.month,
                                value.begin.day, value.end.year, value.end.month,
                                value.end.day);
         },
-        [](auto&& self, const interpreter::Tuple<interpreter::BoxedValue>& c) {
+        [](auto&& self, const interpreter::Tuple<interpreter::BoxedValue>& c)
+            -> ExitValueType {
             auto buffer = fmt::memory_buffer {};
             auto output = std::back_inserter(buffer);
             fmt::format_to(output, "(");
@@ -80,7 +88,8 @@ int32_t execute_script(const std::string_view& input) {
 
             return fmt::to_string(buffer);
         },
-        [](auto&& self, const interpreter::Vector<interpreter::BoxedValue>& c) {
+        [](auto&& self, const interpreter::Vector<interpreter::BoxedValue>& c)
+            -> ExitValueType {
             auto buffer = fmt::memory_buffer {};
             auto output = std::back_inserter(buffer);
             fmt::format_to(output, "[");
@@ -94,7 +103,8 @@ int32_t execute_script(const std::string_view& input) {
 
             return fmt::to_string(buffer);
         },
-        [](auto&& self, const interpreter::Set<interpreter::BoxedValue>& c) {
+        [](auto&& self, const interpreter::Set<interpreter::BoxedValue>& c)
+            -> ExitValueType {
             auto buffer = fmt::memory_buffer {};
             auto output = std::back_inserter(buffer);
             fmt::format_to(output, "<<?");
@@ -109,20 +119,21 @@ int32_t execute_script(const std::string_view& input) {
             return fmt::to_string(buffer);
         },
         [](auto&&, const interpreter::Map<interpreter::BoxedValue,
-                                          interpreter::BoxedValue>& c) {
+                                          interpreter::BoxedValue>& c)
+            -> ExitValueType {
             (void)c;
             return std::string {};
         },
-        [](auto&&, const auto& value) {
+        [](auto&&, const auto& value) -> ExitValueType {
             auto name
                 = boost::typeindex::type_id<decltype(value)>().pretty_name();
             return fmt::format("{}", name);
         },
     };
-    auto output = v.visit(result);
-    fmt::print("{}\n", output);
 
-    return 0;
+    auto output = v.visit(result);
+
+    return output;
 }
 
 int main(int argc, const char* argv[]) {
@@ -131,9 +142,9 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    fmt::print("Executing {}...\n", argv[1]);
+    fmt::print("Executing {}...\n\n", argv[1]);
     auto result = execute_script(argv[1]);
-    fmt::print("Result: {}\n", result);
+    fmt::print("\n{} has exited with code {}.\n", argv[1], result);
 
     return 0;
 }
