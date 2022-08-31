@@ -53,7 +53,6 @@ bool ExpressionsParser::parse_to_tree_(const std::string_view& input,
     auto tree = ast::Entry {};
     auto result = x3::phrase_parse(begin, end, parser, skipper, tree);
     if (!result) {
-        on_error(begin, "Error! Expecting end of input here: ");
         return false;
     }
 
