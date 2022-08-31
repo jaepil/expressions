@@ -74,4 +74,5 @@ draw = () => {
     return result;
 }
 
-return draw();
+picture = draw();
+print(picture)
