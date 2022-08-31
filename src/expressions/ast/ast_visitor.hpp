@@ -45,29 +45,20 @@ public:
     ReturnType operator()(const Null& node) const {
         return get().return_(node);
     }
-    ReturnType operator()(const Bool& value) const {
+    ReturnType operator()(bool value) const {
         return get().return_(value);
     }
-    ReturnType operator()(const int64_t& value) const {
+    ReturnType operator()(int64_t value) const {
         return get().return_(value);
     }
-    ReturnType operator()(const uint64_t& value) const {
+    ReturnType operator()(uint64_t value) const {
         return get().return_(value);
     }
-    ReturnType operator()(const double& value) const {
+    ReturnType operator()(double value) const {
         return get().return_(value);
     }
     ReturnType operator()(const std::string& value) const {
         return get().return_(value);
-    }
-    ReturnType operator()(const Int64& node) const {
-        return get().return_(node);
-    }
-    ReturnType operator()(const UInt64& node) const {
-        return get().return_(node);
-    }
-    ReturnType operator()(const Double& node) const {
-        return get().return_(node);
     }
     ReturnType operator()(const Name& node) const {
         return get().return_(node);
@@ -96,13 +87,6 @@ public:
         return get().return_(node);
     }
     ReturnType operator()(const Set& node) const {
-        return get().return_(node);
-    }
-
-    ReturnType operator()(const NamedExpression& node) const {
-        return get().return_(node);
-    }
-    ReturnType operator()(const NamedExpressionList& node) const {
         return get().return_(node);
     }
 
@@ -136,9 +120,6 @@ public:
         return get().return_(node);
     }
     ReturnType operator()(const Expression& node) const {
-        return get().return_(node);
-    }
-    ReturnType operator()(const AliasedExpression& node) const {
         return get().return_(node);
     }
     ReturnType operator()(const AssignStatement& node) const {
@@ -229,31 +210,22 @@ public:
     ReturnType operator()(const Null& node) const {
         return ReturnType {node};
     }
-    ReturnType operator()(const Bool& node) const {
-        return ReturnType {node};
-    }
-    ReturnType operator()(const int64_t& value) const {
+    ReturnType operator()(bool value) const {
         return ReturnType {value};
     }
-    ReturnType operator()(const uint64_t& value) const {
+    ReturnType operator()(int64_t value) const {
         return ReturnType {value};
     }
-    ReturnType operator()(const double& value) const {
+    ReturnType operator()(uint64_t value) const {
+        return ReturnType {value};
+    }
+    ReturnType operator()(double value) const {
         return ReturnType {value};
     }
     ReturnType operator()(const std::string& value) const {
         return ReturnType {value};
     }
     ReturnType operator()(const Name& node) const {
-        return ReturnType {node};
-    }
-    ReturnType operator()(const Int64& node) const {
-        return ReturnType {node};
-    }
-    ReturnType operator()(const UInt64& node) const {
-        return ReturnType {node};
-    }
-    ReturnType operator()(const Double& node) const {
         return ReturnType {node};
     }
     ReturnType operator()(const String& node) const {
@@ -301,19 +273,6 @@ public:
         }
 
         return ReturnType {Set {std::move(values)}};
-    }
-
-    ReturnType operator()(const NamedExpression& node) const {
-        return ReturnType {NamedExpression {node.name, visit(node.expr)}};
-    }
-    ReturnType operator()(const NamedExpressionList& node) const {
-        auto args = std::vector<NamedExpression> {};
-        args.reserve(node.values.size());
-        for (const auto& arg : node.values) {
-            args.emplace_back(NamedExpression {arg.name, visit(arg.expr)});
-        }
-
-        return ReturnType {NamedExpressionList {std::move(args)}};
     }
 
     ReturnType operator()(const CompareOp& node) const {
@@ -391,10 +350,6 @@ public:
         auto expr = visit(node.expr);
 
         return ReturnType {Expression {std::move(expr)}};
-    }
-    ReturnType operator()(const AliasedExpression& node) const {
-        return ReturnType {
-            AliasedExpression {visit(node.expr), node.op, visit(node.aliases)}};
     }
     ReturnType operator()(const AssignStatement& node) const {
         auto target = visit(node.target);

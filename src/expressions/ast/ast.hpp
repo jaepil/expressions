@@ -45,7 +45,6 @@ struct Break;
 struct Continue;
 
 struct Expression;
-struct AliasedExpression;
 struct Lambda;
 struct BoolOp;
 struct UnaryOp;
@@ -57,16 +56,9 @@ struct Call;
 struct Argument;
 struct KeywordArgument;
 
-struct NamedExpression;
-struct NamedExpressionList;
-
 struct Name;
 struct QuotedString;
 struct String;
-struct Bool;
-struct Int64;
-struct UInt64;
-struct Double;
 struct Date;
 struct DateRange;
 struct Tuple;
@@ -120,12 +112,10 @@ enum class BinOpType : int32_t {
     kPow,
 };
 
-using AtomType
-    = x3::variant<MonoState, Null, Bool, int64_t, uint64_t, double,
-                  x3::forward_ast<Name>, x3::forward_ast<Int64>,
-                  x3::forward_ast<UInt64>, x3::forward_ast<Double>,
-                  x3::forward_ast<String>, x3::forward_ast<QuotedString>,
-                  x3::forward_ast<Date>, x3::forward_ast<DateRange>>;
+using AtomType = x3::variant<MonoState, Null, bool, int64_t, uint64_t, double,
+                             x3::forward_ast<Name>, x3::forward_ast<String>,
+                             x3::forward_ast<QuotedString>,
+                             x3::forward_ast<Date>, x3::forward_ast<DateRange>>;
 
 using CollectionType
     = x3::variant<MonoState, x3::forward_ast<Tuple>, x3::forward_ast<List>,
@@ -136,11 +126,9 @@ using ArithmeticType
                   x3::forward_ast<CompareOp>, x3::forward_ast<BinOp>>;
 
 using ExpressionType
-    = x3::variant<MonoState, x3::forward_ast<NamedExpression>,
-                  x3::forward_ast<NamedExpressionList>, x3::forward_ast<Call>,
-                  x3::forward_ast<Argument>, x3::forward_ast<KeywordArgument>,
-                  x3::forward_ast<Lambda>, x3::forward_ast<Expression>,
-                  x3::forward_ast<AliasedExpression>>;
+    = x3::variant<MonoState, x3::forward_ast<Call>, x3::forward_ast<Argument>,
+                  x3::forward_ast<KeywordArgument>, x3::forward_ast<Lambda>,
+                  x3::forward_ast<Expression>>;
 
 using StatementType = x3::variant<
     MonoState, x3::forward_ast<AssignStatement>,
@@ -159,8 +147,7 @@ using Value = x3::variant<
     MonoState,
 
     // Atom
-    Null, Bool, int64_t, uint64_t, double, x3::forward_ast<Name>,
-    x3::forward_ast<Int64>, x3::forward_ast<UInt64>, x3::forward_ast<Double>,
+    Null, bool, int64_t, uint64_t, double, x3::forward_ast<Name>,
     x3::forward_ast<String>, x3::forward_ast<QuotedString>,
     x3::forward_ast<Date>, x3::forward_ast<DateRange>,
 
@@ -174,12 +161,10 @@ using Value = x3::variant<
     x3::forward_ast<BinOpIntermediate>,
 
     // Expression
-    x3::forward_ast<NamedExpression>, x3::forward_ast<NamedExpressionList>,
     x3::forward_ast<Call>, x3::forward_ast<Argument>,
     x3::forward_ast<KeywordArgument>,
 
     x3::forward_ast<Lambda>, x3::forward_ast<Expression>,
-    x3::forward_ast<AliasedExpression>,
 
     // Statement
     x3::forward_ast<AssignStatement>, x3::forward_ast<LazyAssignStatement>,
@@ -199,25 +184,6 @@ using Value = x3::variant<
 
 struct Name {
     std::string value {};
-};
-
-struct Bool {
-    bool value {};
-};
-
-struct Int64 {
-    int64_t n {};
-    std::string s {};
-};
-
-struct UInt64 {
-    uint64_t n {};
-    std::string s {};
-};
-
-struct Double {
-    double n {};
-    std::string s {};
 };
 
 struct String {
@@ -258,15 +224,6 @@ struct Dict {
 
 struct Set {
     std::vector<Value> values {};
-};
-
-struct NamedExpression {
-    Name name {};
-    Value expr {};
-};
-
-struct NamedExpressionList {
-    std::vector<NamedExpression> values;
 };
 
 struct Call {
@@ -322,12 +279,6 @@ struct BinOpIntermediate {
 
 struct Expression {
     Value expr {};
-};
-
-struct AliasedExpression {
-    Value expr {};
-    AliasType op {AliasType::kNone};
-    Value aliases {};
 };
 
 struct Lambda {
@@ -405,10 +356,6 @@ struct Entry {
 }    // namespace expressions::ast
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Name, value)
-
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Int64, n, s)
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::UInt64, n, s)
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Double, n, s)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::String, value)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Date, year, month, day)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::DateRange, begin, end)
@@ -418,9 +365,6 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::List, values)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::DictItem, key, value)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Dict, items)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Set, values)
-
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::NamedExpression, name, expr)
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::NamedExpressionList, values)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Call, name, args)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Argument, arg)
@@ -438,8 +382,6 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::BinOpIntermediate, first, rest)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Lambda, params, expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Expression, expr)
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AliasedExpression, expr, op,
-                          aliases)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AssignStatement, target, expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::LazyAssignStatement, target, expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AugAssignStatement, target, op,

@@ -32,93 +32,109 @@ namespace expressions::parser {
 
 namespace x3 = boost::spirit::x3;
 
+struct error_handler {
+    template<typename Iterator, typename Exception, typename Context>
+    x3::error_handler_result on_error(const Iterator& first,
+                                      const Iterator& last, const Exception& e,
+                                      const Context& context) {
+        (void)first;
+        (void)last;
+
+        auto message = fmt::format("Error: Expecting {} here:", e.which());
+        const auto& handler = x3::get<x3::error_handler_tag>(context).get();
+        handler(e.where(), message);
+
+        return x3::error_handler_result::fail;
+    }
+};
+
+template<typename T, typename U>
+struct rule_impl {
+    struct _ : error_handler, x3::annotate_on_success {};
+    using type = x3::rule<_, U>;
+};
+
+template<typename T, typename U>
+using rule = typename rule_impl<T, U>::type;
+
 // type declaration
-using entry_type = x3::rule<struct entry_class, ast::Entry>;
-using package_name_type = x3::rule<struct package_name_class, ast::PackageName>;
-using statement_type = x3::rule<struct statement_class, ast::Value>;
+using entry_type = rule<struct entry_class, ast::Entry>;
+using package_name_type = rule<struct package_name_class, ast::PackageName>;
+using statement_type = rule<struct statement_class, ast::Value>;
 
 using compound_statement_type
-    = x3::rule<struct compound_statement_class, ast::Value>;
-using if_statement_type = x3::rule<struct if_statement_class, ast::IfStatement>;
-using for_statement_type = x3::rule<struct for_statement_class, ast::Value>;
-using for_init_type = x3::rule<struct for_init_class, ast::AssignStatement>;
-using for_condition_type = x3::rule<struct for_condition_class, ast::Value>;
+    = rule<struct compound_statement_class, ast::Value>;
+using if_statement_type = rule<struct if_statement_class, ast::IfStatement>;
+using for_statement_type = rule<struct for_statement_class, ast::Value>;
+using for_init_type = rule<struct for_init_class, ast::AssignStatement>;
+using for_condition_type = rule<struct for_condition_class, ast::Value>;
 using for_iteration_type
-    = x3::rule<struct for_iteration_class, ast::AugAssignStatement>;
+    = rule<struct for_iteration_class, ast::AugAssignStatement>;
 using classic_for_statement_type
-    = x3::rule<struct classic_for_statement_class, ast::ForStatement>;
-using for_target_type = x3::rule<struct for_target_class, ast::List>;
-using for_targets_type = x3::rule<struct for_targets_class, ast::Value>;
+    = rule<struct classic_for_statement_class, ast::ForStatement>;
+using for_target_type = rule<struct for_target_class, ast::List>;
+using for_targets_type = rule<struct for_targets_class, ast::Value>;
 using range_based_for_statement_type
-    = x3::rule<struct for_statement_class, ast::RangeBasedForStatement>;
+    = rule<struct for_statement_class, ast::RangeBasedForStatement>;
 using while_statement_type
-    = x3::rule<struct while_statement_class, ast::WhileStatement>;
+    = rule<struct while_statement_class, ast::WhileStatement>;
 
-using simple_statement_type
-    = x3::rule<struct simple_statement_class, ast::Value>;
+using simple_statement_type = rule<struct simple_statement_class, ast::Value>;
 using assign_statement_type
-    = x3::rule<struct assign_statement_class, ast::AssignStatement>;
+    = rule<struct assign_statement_class, ast::AssignStatement>;
 using lazy_assign_statement_type
-    = x3::rule<struct lazy_assign_statement_class, ast::LazyAssignStatement>;
+    = rule<struct lazy_assign_statement_class, ast::LazyAssignStatement>;
 using aug_assign_statement_type
-    = x3::rule<struct aug_assign_statement_class, ast::AugAssignStatement>;
+    = rule<struct aug_assign_statement_class, ast::AugAssignStatement>;
 
 using return_statement_type
-    = x3::rule<struct return_statement_class, ast::ReturnStatement>;
-using pass_statement_type = x3::rule<struct pass_statement_class, ast::Pass>;
-using break_statement_type = x3::rule<struct break_statement_class, ast::Break>;
+    = rule<struct return_statement_class, ast::ReturnStatement>;
+using pass_statement_type = rule<struct pass_statement_class, ast::Pass>;
+using break_statement_type = rule<struct break_statement_class, ast::Break>;
 using continue_statement_type
-    = x3::rule<struct continue_statement_class, ast::Continue>;
+    = rule<struct continue_statement_class, ast::Continue>;
 
 using statement_list_type
-    = x3::rule<struct statement_list_class, ast::StatementList>;
+    = rule<struct statement_list_class, ast::StatementList>;
 
-using alias_target_type = x3::rule<struct alias_target_class, ast::List>;
-using alias_targets_type = x3::rule<struct alias_targets_class, ast::Value>;
-using aliased_expression_type
-    = x3::rule<struct aliased_expression_class, ast::AliasedExpression>;
-using expression_type = x3::rule<struct expression_class, ast::Value>;
-using lambda_expr_type = x3::rule<struct lambda_expr_class, ast::Lambda>;
+using expression_type = rule<struct expression_class, ast::Value>;
+using lambda_expr_type = rule<struct lambda_expr_class, ast::Lambda>;
 
-using bool_expr_type = x3::rule<struct bool_expr_class, ast::BoolOp>;
-using bool_expr_or_type = x3::rule<struct bool_expr_or_class, ast::BoolOp>;
-using bool_expr_and_type = x3::rule<struct bool_expr_and_class, ast::BoolOp>;
-using unary_expr_type = x3::rule<struct unary_expr_class, ast::Value>;
+using bool_expr_type = rule<struct bool_expr_class, ast::BoolOp>;
+using bool_expr_or_type = rule<struct bool_expr_or_class, ast::BoolOp>;
+using bool_expr_and_type = rule<struct bool_expr_and_class, ast::BoolOp>;
+using unary_expr_type = rule<struct unary_expr_class, ast::Value>;
 
-using compare_ops_type = x3::rule<struct compare_ops_class, ast::CompareOpType>;
-using compare_op_expr_type = x3::rule<struct compare_op_expr_class, ast::Value>;
-using bin_op_expr_type = x3::rule<struct bin_op_expr_class, ast::Value>;
+using compare_ops_type = rule<struct compare_ops_class, ast::CompareOpType>;
+using compare_op_expr_type = rule<struct compare_op_expr_class, ast::Value>;
+using bin_op_expr_type = rule<struct bin_op_expr_class, ast::Value>;
 using bin_op_additive_expr_type
-    = x3::rule<struct bin_op_additive_expr_class, ast::Value>;
+    = rule<struct bin_op_additive_expr_class, ast::Value>;
 using bin_op_multiplicative_expr_type
-    = x3::rule<struct bin_op_multiplicative_expr_class, ast::Value>;
+    = rule<struct bin_op_multiplicative_expr_class, ast::Value>;
 using bin_op_exponential_expr_type
-    = x3::rule<struct bin_op_exponential_expr_class, ast::Value>;
+    = rule<struct bin_op_exponential_expr_class, ast::Value>;
 
-using primary_type = x3::rule<struct primary_class, ast::Value>;
-using call_type = x3::rule<struct call_class, ast::Call>;
-using argument_type = x3::rule<struct argument_class, ast::Argument>;
+using primary_type = rule<struct primary_class, ast::Value>;
+using call_type = rule<struct call_class, ast::Call>;
+using argument_type = rule<struct argument_class, ast::Argument>;
 using keyword_argument_type
-    = x3::rule<struct keyword_argument_class, ast::KeywordArgument>;
+    = rule<struct keyword_argument_class, ast::KeywordArgument>;
 using argument_list_type
-    = x3::rule<struct argument_list_class, std::vector<ast::Value>>;
+    = rule<struct argument_list_class, std::vector<ast::Value>>;
 
-using named_expr_type = x3::rule<struct named_arg_class, ast::NamedExpression>;
-using named_expr_list_type
-    = x3::rule<struct named_arg_list_class, ast::NamedExpressionList>;
-using atom_type = x3::rule<struct atom_class, ast::Value>;
-using numbers_type = x3::rule<struct numbers_class, ast::Value>;
-using id_type = x3::rule<struct id_class, ast::Name>;
-using quoted_string_type
-    = x3::rule<struct quoted_string_class, ast::QuotedString>;
+using atom_type = rule<struct atom_class, ast::Value>;
+using numbers_type = rule<struct numbers_class, ast::Value>;
+using id_type = rule<struct id_class, ast::Name>;
+using quoted_string_type = rule<struct quoted_string_class, ast::QuotedString>;
 
-using sequence_type = x3::rule<struct sequence_class, ast::Value>;
-using group_type = x3::rule<struct group_class, ast::Value>;
-using tuple_type = x3::rule<struct tuple_class, ast::Tuple>;
-using list_type = x3::rule<struct list_class, ast::List>;
-using dict_type = x3::rule<struct dict_class, ast::Dict>;
-using dict_item_type = x3::rule<struct dict_item_class, ast::DictItem>;
-using set_type = x3::rule<struct set_class, ast::Set>;
+using sequence_type = rule<struct sequence_class, ast::Value>;
+using group_type = rule<struct group_class, ast::Value>;
+using tuple_type = rule<struct tuple_class, ast::Tuple>;
+using list_type = rule<struct list_class, ast::List>;
+using dict_type = rule<struct dict_class, ast::Dict>;
+using dict_item_type = rule<struct dict_item_class, ast::DictItem>;
+using set_type = rule<struct set_class, ast::Set>;
 
 // type definition
 static const entry_type entry {"entry"};
@@ -153,9 +169,6 @@ static const continue_statement_type continue_statement {"continue_statement"};
 
 static const statement_list_type statement_list {"statement_list"};
 
-static const alias_target_type alias_target {"alias_target"};
-static const alias_targets_type alias_targets {"alias_targets"};
-static const aliased_expression_type aliased_expression {"aliased_expression"};
 static const expression_type expression {"expression"};
 static const lambda_expr_type lambda_expr {"lambda_expr"};
 
@@ -180,9 +193,6 @@ static const argument_type argument {"argument"};
 static const keyword_argument_type keyword_argument {"keyword_argument"};
 static const argument_list_type argument_list {"argument_list"};
 
-static const named_expr_type named_expression {"named_expression"};
-static const named_expr_list_type named_expression_list {
-    "named_expression_list"};
 static const atom_type atom {"atom"};
 static const numbers_type numbers {"numbers"};
 static const id_type id {"id"};
@@ -393,7 +403,7 @@ static const auto simple_statement_def
     = assign_statement
     | lazy_assign_statement
     | aug_assign_statement
-    | expression >> !x3::distinct(alias_op)
+    | expression
     | return_statement
     | pass_statement
     | break_statement
@@ -472,24 +482,8 @@ static const auto compare_ops_def
     ;
 
 static const auto compare_op_expr_def
-    = bin_op_expr >> !x3::distinct(alias_op) >> *(compare_ops > bin_op_expr)
-    | bin_op_expr >> !x3::distinct(alias_op)
-    | aliased_expression
-    ;
-
-static const auto alias_target_def
-    = x3::confix('(', ')')[(quoted_string | id) % ',']
-    | x3::confix('[', ']')[(quoted_string | id) % ',']
-    ;
-
-static const auto alias_targets_def
-    = &(x3::lit('(') | x3::lit('[')) >> alias_target
-    | quoted_string
-    | id
-    ;
-
-static const auto aliased_expression_def
-    = bin_op_expr >> x3::distinct(alias_op) >> atom
+    = bin_op_expr >> *(compare_ops > bin_op_expr)
+    | bin_op_expr
     ;
 
 static const auto bin_op_expr_def
@@ -554,14 +548,6 @@ static const auto call_def
     = id >> x3::confix('(', ')')[-argument_list] >> !x3::lit("=>")
     ;
 
-static const auto named_expression_def
-    = id >> '=' >> unary_expr
-    ;
-
-static const auto named_expression_list_def
-    = x3::confix('{', '}')[named_expression % ',']
-    ;
-
 static const auto numbers_def
     = x3::distinct(
         x3::strict_double
@@ -575,8 +561,8 @@ static const auto null
     ;
 
 static const auto boolean
-    = x3::distinct("true") >> x3::attr(ast::Bool {true})
-    | x3::distinct("false") >> x3::attr(ast::Bool {false})
+    = x3::distinct("true") >> x3::attr(true)
+    | x3::distinct("false") >> x3::attr(false)
     ;
 
 static const auto verify_date = [](auto& ctx) {
@@ -671,7 +657,6 @@ static const auto atom_def
         | null
         | boolean
         | (&number_lookahead >> numbers)
-        | named_expression_list
         | quoted_string
         | (&sequence_lookahead >> sequence)
     )
@@ -745,39 +730,13 @@ BOOST_SPIRIT_DEFINE(entry, package_name, compound_statement, simple_statement,
                     statement, assign_statement, lazy_assign_statement,
                     aug_assign_statement, return_statement, pass_statement,
                     break_statement, continue_statement, statement_list,
-                    alias_target, alias_targets, aliased_expression, expression,
-                    lambda_expr, bool_expr, bool_expr_or, bool_expr_and,
-                    unary_expr, compare_ops, compare_op_expr, bin_op_expr,
-                    bin_op_additive_expr, bin_op_multiplicative_expr,
-                    bin_op_exponential_expr, primary, call, argument,
-                    keyword_argument, argument_list, named_expression,
-                    named_expression_list, atom, numbers, id, quoted_string,
-                    sequence, group, tuple, list, dict, dict_item, set)
-
-struct error_handler {
-    template<typename Iterator, typename Exception, typename Context>
-    x3::error_handler_result on_error(const Iterator& first,
-                                      const Iterator& last, const Exception& e,
-                                      const Context& context) {
-        (void)first;
-        (void)last;
-        (void)context;
-
-        auto& error_handler = x3::get<x3::error_handler_tag>(context).get();
-        auto message = "Error! Expecting: " + e.which() + " here:";
-        error_handler(e.where(), message);
-
-        return x3::error_handler_result::fail;
-
-        // auto message = fmt::format("Error: expecting: {}, here: \"{}\"",
-        //                            e.which(), std::string {e.where(), last});
-        // fmt::print("{}\n", message);
-
-        // return x3::error_handler_result::fail;
-    }
-};
-
-struct entry_class : error_handler, x3::annotate_on_success {};
+                    expression, lambda_expr, bool_expr, bool_expr_or,
+                    bool_expr_and, unary_expr, compare_ops, compare_op_expr,
+                    bin_op_expr, bin_op_additive_expr,
+                    bin_op_multiplicative_expr, bin_op_exponential_expr,
+                    primary, call, argument, keyword_argument, argument_list,
+                    atom, numbers, id, quoted_string, sequence, group, tuple,
+                    list, dict, dict_item, set)
 
 }    // namespace expressions::parser
 

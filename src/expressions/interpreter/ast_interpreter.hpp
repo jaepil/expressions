@@ -292,17 +292,13 @@ public:
     ReturnType operator()(const ast::MonoState& node) const;
 
     ReturnType operator()(const ast::Null& node) const;
-    ReturnType operator()(const ast::Bool& node) const;
+    ReturnType operator()(bool value) const;
 
     ReturnType operator()(int64_t value) const;
     ReturnType operator()(uint64_t value) const;
     ReturnType operator()(double value) const;
-    ReturnType operator()(const std::string& value) const;
 
     ReturnType operator()(const ast::Name& node) const;
-    ReturnType operator()(const ast::Int64& node) const;
-    ReturnType operator()(const ast::UInt64& node) const;
-    ReturnType operator()(const ast::Double& node) const;
     ReturnType operator()(const ast::String& node) const;
     ReturnType operator()(const ast::QuotedString& node) const;
 
@@ -313,9 +309,6 @@ public:
     ReturnType operator()(const ast::List& node) const;
     ReturnType operator()(const ast::Dict& node) const;
     ReturnType operator()(const ast::Set& node) const;
-
-    ReturnType operator()(const ast::NamedExpression& node) const;
-    ReturnType operator()(const ast::NamedExpressionList& node) const;
 
     ReturnType operator()(const ast::CompareOp& node) const;
     ReturnType operator()(const ast::BinOp& node) const;
@@ -334,7 +327,6 @@ public:
 
     ReturnType operator()(const ast::Lambda& node) const;
     ReturnType operator()(const ast::Expression& node) const;
-    ReturnType operator()(const ast::AliasedExpression& node) const;
     ReturnType operator()(const ast::AssignStatement& node) const;
     ReturnType operator()(const ast::LazyAssignStatement& node) const;
     ReturnType operator()(const ast::AugAssignStatement& node) const;

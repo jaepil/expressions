@@ -16,6 +16,101 @@
 
 namespace expressions::interpreter {
 
+void __builtin_print(const std::vector<BoxedValue>& args) {
+    auto printer = SelfVisitableVisitor {
+        [](auto&&, interpreter::Null) {
+            return std::string {"null"};
+        },
+        [](auto&&, bool value) {
+            return fmt::format("{}", value);
+        },
+        [](auto&&, int64_t value) {
+            return fmt::format("{}", value);
+        },
+        [](auto&&, uint64_t value) {
+            return fmt::format("{}", value);
+        },
+        [](auto&&, double value) {
+            return fmt::format("{}", value);
+        },
+        [](auto&&, const interpreter::Name& value) {
+            return value.value;
+        },
+        [](auto&&, const interpreter::String& value) {
+            return fmt::format("{}", value.value);
+        },
+        [](auto&&, const interpreter::Date& value) {
+            return fmt::format("{:04}-{:02}-{:02}", value.year, value.month,
+                               value.day);
+        },
+        [](auto&&, const interpreter::DateRange& value) {
+            return fmt::format("{:04}-{:02}-{:02}-{:04}-{:02}-{:02}",
+                               value.begin.year, value.begin.month,
+                               value.begin.day, value.end.year, value.end.month,
+                               value.end.day);
+        },
+        [](auto&& self, const interpreter::Tuple<interpreter::BoxedValue>& c) {
+            auto buffer = fmt::memory_buffer {};
+            auto output = std::back_inserter(buffer);
+            fmt::format_to(output, "(");
+            for (const auto& [index, item] : enumerate(c)) {
+                if (index > 0) {
+                    fmt::format_to(output, ", ");
+                }
+                fmt::format_to(output, "{}", self.visit(item));
+            }
+            fmt::format_to(output, ")");
+
+            return fmt::to_string(buffer);
+        },
+        [](auto&& self, const interpreter::Vector<interpreter::BoxedValue>& c) {
+            auto buffer = fmt::memory_buffer {};
+            auto output = std::back_inserter(buffer);
+            fmt::format_to(output, "[");
+            for (const auto& [index, item] : enumerate(c)) {
+                if (index > 0) {
+                    fmt::format_to(output, ", ");
+                }
+                fmt::format_to(output, "{}", self.visit(item));
+            }
+            fmt::format_to(output, "]");
+
+            return fmt::to_string(buffer);
+        },
+        [](auto&& self, const interpreter::Set<interpreter::BoxedValue>& c) {
+            auto buffer = fmt::memory_buffer {};
+            auto output = std::back_inserter(buffer);
+            fmt::format_to(output, "<<?");
+            for (const auto& [index, item] : enumerate(c)) {
+                if (index > 0) {
+                    fmt::format_to(output, ", ");
+                }
+                fmt::format_to(output, "{}", self.visit(item));
+            }
+            fmt::format_to(output, "?>>");
+
+            return fmt::to_string(buffer);
+        },
+        [](auto&&, const interpreter::Map<interpreter::BoxedValue,
+                                          interpreter::BoxedValue>& c) {
+            (void)c;
+            return std::string {};
+        },
+        [](auto&&, const auto& value) {
+            auto name
+                = boost::typeindex::type_id<decltype(value)>().pretty_name();
+            return fmt::format("{}", name);
+        },
+    };
+
+    auto output = std::vector<std::string> {};
+    output.reserve(args.size());
+    for (const auto& arg : args) {
+        output.emplace_back(printer.visit(arg));
+    }
+    fmt::print("{}\n", fmt::join(output, " "));
+}
+
 auto ASTInterpreter::operator()(const ast::MonoState& node) const
     -> ReturnType {
     (void)node;
@@ -29,8 +124,8 @@ auto ASTInterpreter::operator()(const ast::Null& node) const -> ReturnType {
     return Null {};
 }
 
-auto ASTInterpreter::operator()(const ast::Bool& node) const -> ReturnType {
-    return node.value;
+auto ASTInterpreter::operator()(bool value) const -> ReturnType {
+    return value;
 }
 
 auto ASTInterpreter::operator()(int64_t value) const -> ReturnType {
@@ -43,10 +138,6 @@ auto ASTInterpreter::operator()(uint64_t value) const -> ReturnType {
 
 auto ASTInterpreter::operator()(double value) const -> ReturnType {
     return value;
-}
-
-auto ASTInterpreter::operator()(const std::string& value) const -> ReturnType {
-    return String {value};
 }
 
 auto ASTInterpreter::operator()(const ast::Name& node) const -> ReturnType {
@@ -75,18 +166,6 @@ auto ASTInterpreter::operator()(const ast::Name& node) const -> ReturnType {
     } else {
         return it.value()->second;
     }
-}
-
-auto ASTInterpreter::operator()(const ast::Int64& node) const -> ReturnType {
-    return node.n;
-}
-
-auto ASTInterpreter::operator()(const ast::UInt64& node) const -> ReturnType {
-    return node.n;
-}
-
-auto ASTInterpreter::operator()(const ast::Double& node) const -> ReturnType {
-    return node.n;
 }
 
 auto ASTInterpreter::operator()(const ast::String& node) const -> ReturnType {
@@ -169,20 +248,6 @@ auto ASTInterpreter::operator()(const ast::Set& node) const -> ReturnType {
     }
 
     return BoxedValue {std::move(values)};
-}
-
-auto ASTInterpreter::operator()(const ast::NamedExpression& node) const
-    -> ReturnType {
-    (void)node;
-
-    return {};
-}
-
-auto ASTInterpreter::operator()(const ast::NamedExpressionList& node) const
-    -> ReturnType {
-    (void)node;
-
-    return {};
 }
 
 auto ASTInterpreter::operator()(const ast::CompareOp& node) const
@@ -348,6 +413,17 @@ auto ASTInterpreter::operator()(const ast::BinOp& node) const -> ReturnType {
 }
 
 auto ASTInterpreter::operator()(const ast::Call& node) const -> ReturnType {
+    if (node.name.value == "print") {
+        auto args = std::vector<ReturnType> {};
+        args.reserve(node.args.size());
+        for (const auto& arg : node.args) {
+            args.emplace_back(visit_(arg));
+        }
+        __builtin_print(args);
+
+        return Null {};
+    }
+
     auto it = std::optional<Context::iterator> {};
     if (stack_.empty()) {
         it = context_.find(node.name.value);
@@ -521,13 +597,6 @@ auto ASTInterpreter::operator()(const ast::Lambda& node) const -> ReturnType {
 auto ASTInterpreter::operator()(const ast::Expression& node) const
     -> ReturnType {
     return visit_(node.expr);
-}
-
-auto ASTInterpreter::operator()(const ast::AliasedExpression& node) const
-    -> ReturnType {
-    (void)node;
-
-    return {};
 }
 
 auto ASTInterpreter::operator()(const ast::AssignStatement& node) const
