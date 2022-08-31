@@ -7,6 +7,7 @@
 package org.expressions.examples.hello;
 
 
-say_hello = (name) => return "Hello, " + name
+say_hello = (name) => print("Hello,", name)
 
-return say_hello("World!")
+say_hello("World!")
+
