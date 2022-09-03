@@ -64,6 +64,7 @@ using statement_type = rule<struct statement_class, ast::Value>;
 
 using compound_statement_type
     = rule<struct compound_statement_class, ast::Value>;
+using function_def_type = rule<struct function_def_class, ast::FunctionDef>;
 using if_statement_type = rule<struct if_statement_class, ast::IfStatement>;
 using for_statement_type = rule<struct for_statement_class, ast::Value>;
 using for_init_type = rule<struct for_init_class, ast::AssignStatement>;
@@ -142,6 +143,7 @@ static const package_name_type package_name {"package_name"};
 static const statement_type statement {"statement"};
 
 static const compound_statement_type compound_statement {"compound_statement"};
+static const function_def_type function_def {"function_def"};
 static const if_statement_type if_statement {"if_statement"};
 static const for_statement_type for_statement {"for_statement"};
 static const for_init_type for_init {"for_init"};
@@ -262,6 +264,8 @@ static const auto reserved = x3::symbols<std::string_view> {
     "import",
     "from",
 
+    "def",
+
     "if",
     "else",
 
@@ -324,7 +328,8 @@ static const auto package_name_def
     ;
 
 static const auto compound_stmt_lookahead
-    = x3::lit("if")
+    = x3::lit("def")
+    | x3::lit("if")
     | x3::lit("for")
     | x3::lit("while")
     ;
@@ -339,14 +344,23 @@ static const auto statement_list_def
     ;
 
 static const auto compound_statement_def
-    = &x3::lit("if") >> if_statement
+    = &x3::lit("def") >> function_def
+    | &x3::lit("if") >> if_statement
     | &x3::lit("for") >> for_statement
     | &x3::lit("while") >> while_statement
     ;
 
-static const auto statement_body
+static const auto statement_block
     = x3::confix('{', '}')[statement_list]
+    ;
+
+static const auto statement_body
+    = statement_block
     | statement
+    ;
+
+static const auto function_def_def
+    = "def" > id > x3::confix('(', ')')[-argument_list] > statement_block
     ;
 
 static const auto if_statement_def
@@ -723,20 +737,18 @@ static const auto skipper
     ;
 // clang-format on
 
-BOOST_SPIRIT_DEFINE(entry, package_name, compound_statement, simple_statement,
-                    if_statement, for_statement, for_init, for_condition,
-                    for_iteration, classic_for_statement, for_target,
-                    for_targets, range_based_for_statement, while_statement,
-                    statement, assign_statement, lazy_assign_statement,
-                    aug_assign_statement, return_statement, pass_statement,
-                    break_statement, continue_statement, statement_list,
-                    expression, lambda_expr, bool_expr, bool_expr_or,
-                    bool_expr_and, unary_expr, compare_ops, compare_op_expr,
-                    bin_op_expr, bin_op_additive_expr,
-                    bin_op_multiplicative_expr, bin_op_exponential_expr,
-                    primary, call, argument, keyword_argument, argument_list,
-                    atom, numbers, id, quoted_string, sequence, group, tuple,
-                    list, dict, dict_item, set)
+BOOST_SPIRIT_DEFINE(
+    entry, package_name, compound_statement, simple_statement, function_def,
+    if_statement, for_statement, for_init, for_condition, for_iteration,
+    classic_for_statement, for_target, for_targets, range_based_for_statement,
+    while_statement, statement, assign_statement, lazy_assign_statement,
+    aug_assign_statement, return_statement, pass_statement, break_statement,
+    continue_statement, statement_list, expression, lambda_expr, bool_expr,
+    bool_expr_or, bool_expr_and, unary_expr, compare_ops, compare_op_expr,
+    bin_op_expr, bin_op_additive_expr, bin_op_multiplicative_expr,
+    bin_op_exponential_expr, primary, call, argument, keyword_argument,
+    argument_list, atom, numbers, id, quoted_string, sequence, group, tuple,
+    list, dict, dict_item, set)
 
 }    // namespace expressions::parser
 

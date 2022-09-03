@@ -36,6 +36,7 @@ struct LazyAssignStatement;
 struct AugAssignStatement;
 struct ReturnStatement;
 struct StatementList;
+struct FunctionDef;
 struct IfStatement;
 struct ForStatement;
 struct RangeBasedForStatement;
@@ -133,10 +134,10 @@ using ExpressionType
 using StatementType = x3::variant<
     MonoState, x3::forward_ast<AssignStatement>,
     x3::forward_ast<LazyAssignStatement>, x3::forward_ast<AugAssignStatement>,
-    x3::forward_ast<ReturnStatement>, x3::forward_ast<IfStatement>,
-    x3::forward_ast<ForStatement>, x3::forward_ast<RangeBasedForStatement>,
-    x3::forward_ast<WhileStatement>, x3::forward_ast<Pass>,
-    x3::forward_ast<Break>, x3::forward_ast<Continue>,
+    x3::forward_ast<ReturnStatement>, x3::forward_ast<FunctionDef>,
+    x3::forward_ast<IfStatement>, x3::forward_ast<ForStatement>,
+    x3::forward_ast<RangeBasedForStatement>, x3::forward_ast<WhileStatement>,
+    x3::forward_ast<Pass>, x3::forward_ast<Break>, x3::forward_ast<Continue>,
     x3::forward_ast<StatementList>>;
 
 using ValueType
@@ -165,6 +166,9 @@ using Value = x3::variant<
     x3::forward_ast<KeywordArgument>,
 
     x3::forward_ast<Lambda>, x3::forward_ast<Expression>,
+
+    // Function
+    x3::forward_ast<FunctionDef>,
 
     // Statement
     x3::forward_ast<AssignStatement>, x3::forward_ast<LazyAssignStatement>,
@@ -310,6 +314,12 @@ struct StatementList {
     std::vector<Value> stmts;
 };
 
+struct FunctionDef {
+    Name name {};
+    std::vector<Value> params {};
+    Value body {};
+};
+
 struct IfStatement {
     Value condition {};
     Value body {};
@@ -388,6 +398,8 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AugAssignStatement, target, op,
                           expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ReturnStatement, expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::StatementList, stmts)
+
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::FunctionDef, name, params, body)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::IfStatement, condition, body,
                           or_else)

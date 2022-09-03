@@ -443,35 +443,41 @@ auto ASTInterpreter::operator()(const ast::Call& node) const -> ReturnType {
         }
     }
 
+    std::vector<ast::Value>* params = nullptr;
+    ast::Value* body = nullptr;
     auto& object = it.value()->second;
-    auto* lambda = ast::get_if<Lambda>(&object);
-    if (!lambda) {
-        auto type_name
-            = boost::typeindex::type_id<decltype(object)>().pretty_name();
+    auto type_name = std::string {};
+    if (auto* lambda = ast::get_if<Lambda>(&object)) {
+        params = &lambda->params;
+        body = &lambda->body;
+        type_name
+            = boost::typeindex::type_id<decltype(*lambda)>().pretty_name();
+    } else if (auto* func = ast::get_if<Function>(&object)) {
+        params = &func->params;
+        body = &func->body;
+        type_name = boost::typeindex::type_id<decltype(*func)>().pretty_name();
+    } else {
+        type_name = boost::typeindex::type_id<decltype(object)>().pretty_name();
         THROW_EXCEPTION(std::runtime_error(
             fmt::format("Object '{}' references to '{}' is not callable.",
                         node.name.value, type_name)));
     }
 
-    if (lambda->params.size() != node.args.size()) {
-        auto type_name
-            = boost::typeindex::type_id<decltype(*lambda)>().pretty_name();
-        THROW_EXCEPTION(std::runtime_error(
-            fmt::format("Failed to call object '{}' references to '{}'. It "
-                        "takes {} arguments "
-                        "but {} were given.",
-                        node.name.value, type_name, lambda->params.size(),
-                        node.args.size())));
+    if (params->size() != node.args.size()) {
+        THROW_EXCEPTION(std::runtime_error(fmt::format(
+            "Failed to call object '{}' references to '{}'. It "
+            "takes {} arguments "
+            "but {} were given.",
+            node.name.value, type_name, params->size(), node.args.size())));
     }
 
     auto locals = Context {};
     for (const auto& [index, argument] : enumerate(node.args)) {
         auto name = std::string {};
-        if (auto* parg_def
-            = ast::get_if<ast::Argument>(&lambda->params[index])) {
+        if (auto* parg_def = ast::get_if<ast::Argument>(&params->at(index))) {
             name = ast::get<ast::Name>(parg_def->arg).value;
-        } else if (auto* kwarg_def = ast::get_if<ast::KeywordArgument>(
-                       &lambda->params[index])) {
+        } else if (auto* kwarg_def
+                   = ast::get_if<ast::KeywordArgument>(&params->at(index))) {
             name = kwarg_def->name.value;
         } else {
             THROW_EXCEPTION(std::runtime_error(
@@ -484,7 +490,7 @@ auto ASTInterpreter::operator()(const ast::Call& node) const -> ReturnType {
 
     stack_.emplace_back(std::move(locals));
     try {
-        visit_(lambda->body);
+        visit_(*body);
     } catch (const ReturnException&) {
     }
     stack_.pop_back();
@@ -609,6 +615,10 @@ auto ASTInterpreter::operator()(const ast::AssignStatement& node) const
     if (const auto* lambda = ast::get_if<ast::Lambda>(&node.expr)) {
         auto value = Lambda {lambda->params, lambda->expr};
         context_.insert_or_assign(std::move(name.value), std::move(value));
+    } else if (const auto* func = ast::get_if<ast::FunctionDef>(&node.expr)) {
+        auto value
+            = Function {Name {func->name.value}, func->params, func->body};
+        context_.insert_or_assign(std::move(name.value), std::move(value));
     } else {
         auto value = visit_(node.expr);
         context_.insert_or_assign(std::move(name.value), std::move(value));
@@ -666,6 +676,14 @@ auto ASTInterpreter::operator()(const ast::StatementList& node) const
     }
 
     // return return_value_and_reset_();
+    return Null {};
+}
+
+auto ASTInterpreter::operator()(const ast::FunctionDef& node) const
+    -> ReturnType {
+    auto func = Function {{node.name.value}, node.params, node.body};
+    context_.insert_or_assign(node.name.value, std::move(func));
+
     return Null {};
 }
 

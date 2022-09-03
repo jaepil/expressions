@@ -237,6 +237,37 @@ struct Lambda {
     }
 };
 
+struct Function {
+    Name name {};
+    std::vector<ast::Value> params {};
+    ast::Value body {};
+
+    bool operator==(const Function&) const {
+        THROW_EXCEPTION(
+            std::logic_error("Unsupported operator '==' for type 'Function'"));
+    }
+    bool operator!=(const Function&) const {
+        THROW_EXCEPTION(
+            std::logic_error("Unsupported operator '!=' for type 'Function'"));
+    }
+    bool operator<(const Function&) const {
+        THROW_EXCEPTION(
+            std::logic_error("Unsupported operator '<' for type 'Function'"));
+    }
+    bool operator<=(const Function&) const {
+        THROW_EXCEPTION(
+            std::logic_error("Unsupported operator '<=' for type 'Function'"));
+    }
+    bool operator>(const Function&) const {
+        THROW_EXCEPTION(
+            std::logic_error("Unsupported operator '>' for type 'Function'"));
+    }
+    bool operator>=(const Function&) const {
+        THROW_EXCEPTION(
+            std::logic_error("Unsupported operator '>=' for type 'Function'"));
+    }
+};
+
 template<typename T>
 struct Tuple : std::vector<T> {};
 
@@ -251,8 +282,8 @@ struct Map : std::map<K, V> {};
 
 using BoxedValue = boost::make_recursive_variant<
     Null, bool, int64_t, uint64_t, double, Name, String, Date, DateRange, Code,
-    Lambda, Tuple<boost::recursive_variant_>, Vector<boost::recursive_variant_>,
-    Set<boost::recursive_variant_>,
+    Lambda, Function, Tuple<boost::recursive_variant_>,
+    Vector<boost::recursive_variant_>, Set<boost::recursive_variant_>,
     Map<boost::recursive_variant_, boost::recursive_variant_>>::type;
 
 class ASTInterpreter : public boost::static_visitor<BoxedValue> {
@@ -332,6 +363,8 @@ public:
     ReturnType operator()(const ast::AugAssignStatement& node) const;
     ReturnType operator()(const ast::ReturnStatement& node) const;
     ReturnType operator()(const ast::StatementList& node) const;
+
+    ReturnType operator()(const ast::FunctionDef& node) const;
 
     ReturnType operator()(const ast::IfStatement& node) const;
     ReturnType operator()(const ast::ForStatement& node) const;

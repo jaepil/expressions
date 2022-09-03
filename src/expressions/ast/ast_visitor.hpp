@@ -138,6 +138,10 @@ public:
         return get().return_(node);
     }
 
+    ReturnType operator()(const FunctionDef& node) const {
+        return get().return_(node);
+    }
+
     ReturnType operator()(const IfStatement& node) const {
         return get().return_(node);
     }
@@ -383,6 +387,17 @@ public:
         }
 
         return ReturnType {StatementList {std::move(new_stmts)}};
+    }
+
+    ReturnType operator()(const FunctionDef& node) const {
+        auto params = std::vector<Value> {};
+        params.reserve(node.params.size());
+        for (const auto& p : node.params) {
+            params.emplace_back(visit(p));
+        }
+
+        return ReturnType {FunctionDef {visit<Name>(node.name),
+                                        std::move(params), visit(node.body)}};
     }
 
     ReturnType operator()(const IfStatement& node) const {
