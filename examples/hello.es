@@ -7,7 +7,12 @@
 package org.expressions.examples.hello;
 
 
-say_hello = (name) => print("Hello,", name)
+def make_string(name) {
+    return "Hello, " + name;
+}
 
-say_hello("World!")
+say_hello = make_string;
 
+print_hello = (name) => print(say_hello(name));
+
+print_hello("World!")
