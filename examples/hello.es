@@ -6,6 +6,8 @@
 
 package org.expressions.examples.hello;
 
+import system.console;
+
 
 def make_string(name) {
     return "Hello, " + name;
