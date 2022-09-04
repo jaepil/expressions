@@ -789,6 +789,13 @@ auto ASTInterpreter::operator()(const ast::Continue& node) const -> ReturnType {
     throw ContinueException {};
 }
 
+auto ASTInterpreter::operator()(const ast::ImportPackage& node) const
+    -> ReturnType {
+    (void)node;
+
+    return Null {};
+}
+
 auto ASTInterpreter::operator()(const ast::PackageName& node) const
     -> ReturnType {
     (void)node;

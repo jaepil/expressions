@@ -171,6 +171,10 @@ public:
         return get().return_(node);
     }
 
+    ReturnType operator()(const ImportPackage& node) const {
+        return get().return_(node);
+    }
+
     ReturnType operator()(const PackageName& node) const {
         return get().return_(node);
     }
@@ -433,6 +437,10 @@ public:
         (void)node;
 
         return ReturnType {Continue {}};
+    }
+
+    ReturnType operator()(const ImportPackage& node) const {
+        return ReturnType {node};
     }
 
     ReturnType operator()(const PackageName& node) const {

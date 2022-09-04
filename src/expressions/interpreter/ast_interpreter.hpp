@@ -375,6 +375,7 @@ public:
     ReturnType operator()(const ast::Break& node) const;
     ReturnType operator()(const ast::Continue& node) const;
 
+    ReturnType operator()(const ast::ImportPackage& node) const;
     ReturnType operator()(const ast::PackageName& node) const;
 
     ReturnType operator()(const ast::Entry& node) const;

@@ -29,6 +29,7 @@ using ::expressions::support::boost::get_if;
 struct MonoState {};
 struct Null {};
 struct Entry;
+struct ImportPackage;
 struct PackageName;
 
 struct AssignStatement;
@@ -184,7 +185,8 @@ using Value = x3::variant<
     x3::forward_ast<Break>, x3::forward_ast<Continue>,
 
     // Entry
-    x3::forward_ast<PackageName>, x3::forward_ast<Entry>>;
+    x3::forward_ast<ImportPackage>, x3::forward_ast<PackageName>,
+    x3::forward_ast<Entry>>;
 
 struct Name {
     std::string value {};
@@ -353,12 +355,16 @@ struct Break {};
 
 struct Continue {};
 
+struct ImportPackage {
+    Name path;
+};
+
 struct PackageName {
-    std::vector<Name> path;
-    // std::string name;
+    Name path;
 };
 
 struct Entry {
+    // ImportPackages imports {};
     PackageName package {};
     Value node {};
 };
@@ -410,6 +416,7 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::RangeBasedForStatement, target,
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::WhileStatement, condition, body,
                           or_else)
 
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ImportPackage, path)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::PackageName, path)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Entry, package, node)
