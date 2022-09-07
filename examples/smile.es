@@ -8,22 +8,24 @@
 
 package org.expressions.examples.smile;
 
+import system.console;
 
-is_in_circle = (pos_x, pos_y, circle_x, circle_y, radius) => {
+
+def is_in_circle(pos_x, pos_y, circle_x, circle_y, radius) {
     dist_from_center = (((circle_x - pos_x) ** 2.0)
                         + ((circle_y - pos_y) ** 2.0)) ** 0.5;
     return dist_from_center <= radius;
-};
+}
 
-is_on_circle = (pos_x, pos_y, circle_x, circle_y,
-                radius, thickness, squash_y) => {
+def is_on_circle(pos_x, pos_y, circle_x, circle_y, radius,
+                 thickness, squash_y) {
     dist_from_center = ((circle_x - pos_x) ** 2
                         + ((circle_y - pos_y) / squash_y) ** 2) ** 0.5;
     return dist_from_center >= radius - thickness
             and dist_from_center <= radius + thickness;
-};
+}
 
-draw = () => {
+def draw() {
     result = "";
     char_count = 0;
 
@@ -75,4 +77,4 @@ draw = () => {
 }
 
 picture = draw();
-print(picture)
+print(picture);
