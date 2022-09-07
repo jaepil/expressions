@@ -111,11 +111,75 @@ void __builtin_print(const std::vector<BoxedValue>& args) {
     fmt::print("{}\n", fmt::join(output, " "));
 }
 
+uint64_t __builtin_len(const std::vector<BoxedValue>& args) {
+    auto visitor = SelfVisitableVisitor {
+        [](auto&&, interpreter::Null) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, bool) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, int64_t) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, uint64_t) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, double) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, const interpreter::Name&) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, const interpreter::String& value) -> uint64_t {
+            return value.value.size();
+        },
+        [](auto&&, const interpreter::Date&) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&, const interpreter::DateRange&) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+        [](auto&&,
+           const interpreter::Tuple<interpreter::BoxedValue>& c) -> uint64_t {
+            return c.size();
+        },
+        [](auto&&,
+           const interpreter::Vector<interpreter::BoxedValue>& c) -> uint64_t {
+            return c.size();
+        },
+        [](auto&&,
+           const interpreter::Set<interpreter::BoxedValue>& c) -> uint64_t {
+            return c.size();
+        },
+        [](auto&&,
+           const interpreter::Map<interpreter::BoxedValue,
+                                  interpreter::BoxedValue>& c) -> uint64_t {
+            return c.size();
+        },
+        [](auto&&, const auto&) -> uint64_t {
+            THROW_EXCEPTION(std::invalid_argument("not iterable."));
+        },
+    };
+
+    if (args.size() != 1) {
+        THROW_EXCEPTION(std::invalid_argument("len() only takes 1 argument."));
+    }
+
+    return visitor.visit(args[0]);
+}
+
 auto ASTInterpreter::operator()(const ast::MonoState& node) const
     -> ReturnType {
     (void)node;
 
     THROW_EXCEPTION(ProgramTerminated {"Program got into unexpected state."});
+}
+
+auto ASTInterpreter::operator()(const ast::Ellipsis& node) const -> ReturnType {
+    (void)node;
+
+    return Ellipsis {};
 }
 
 auto ASTInterpreter::operator()(const ast::Null& node) const -> ReturnType {
@@ -422,6 +486,15 @@ auto ASTInterpreter::operator()(const ast::Call& node) const -> ReturnType {
         __builtin_print(args);
 
         return Null {};
+    } else if (node.name.value == "len") {
+        auto args = std::vector<ReturnType> {};
+        args.reserve(node.args.size());
+        for (const auto& arg : node.args) {
+            args.emplace_back(visit_(arg));
+        }
+        return_value_ = __builtin_len(args);
+
+        return return_value_and_reset_();
     }
 
     auto it = std::optional<Context::iterator> {};
@@ -505,6 +578,44 @@ auto ASTInterpreter::operator()(const ast::Argument& node) const -> ReturnType {
 auto ASTInterpreter::operator()(const ast::KeywordArgument& node) const
     -> ReturnType {
     return visit_(node.arg);
+}
+
+auto ASTInterpreter::operator()(const ast::Subscript& node) const
+    -> ReturnType {
+    auto object = visit_(node.name);
+    // if (ast::holds_alternative<Name>(object)) {
+    //     // TODO: throw error
+    //     return {};
+    // }
+    auto boxed_subscript = visit_(node.expr);
+    auto subscript = 0ll;
+    if (ast::holds_alternative<int64_t>(boxed_subscript)) {
+        subscript = ast::get<int64_t>(boxed_subscript);
+    } else if (ast::holds_alternative<uint64_t>(boxed_subscript)) {
+        subscript = static_cast<int64_t>(ast::get<uint64_t>(boxed_subscript));
+    } else {
+        // TODO: throw error
+        return {};
+    }
+
+    auto visitor = SelfVisitableVisitor {
+        [&](auto&&, const Tuple<BoxedValue>& value) {
+            return value.at(subscript);
+        },
+        [&](auto&&, const Vector<BoxedValue>& value) {
+            return value.at(subscript);
+        },
+        [](auto&&, const auto& value) {
+            auto name
+                = boost::typeindex::type_id<decltype(value)>().pretty_name();
+            fmt::print("{}\n", name);
+            return BoxedValue {};
+        },
+    };
+
+    auto element = visitor.visit(object);
+
+    return element;
 }
 
 auto ASTInterpreter::operator()(const ast::UnaryOp& node) const -> ReturnType {
@@ -597,7 +708,7 @@ auto ASTInterpreter::operator()(const ast::BoolOp& node) const -> ReturnType {
 }
 
 auto ASTInterpreter::operator()(const ast::Lambda& node) const -> ReturnType {
-    return visit_(node.expr);
+    return Lambda {node.params, node.expr};
 }
 
 auto ASTInterpreter::operator()(const ast::Expression& node) const
@@ -679,6 +790,13 @@ auto ASTInterpreter::operator()(const ast::StatementList& node) const
     return Null {};
 }
 
+auto ASTInterpreter::operator()(const ast::ExternFunctionDecl& node) const
+    -> ReturnType {
+    (void)node;
+
+    return Null {};
+}
+
 auto ASTInterpreter::operator()(const ast::FunctionDef& node) const
     -> ReturnType {
     auto func = Function {{node.name.value}, node.params, node.body};
@@ -707,7 +825,6 @@ auto ASTInterpreter::operator()(const ast::IfStatement& node) const
 
 auto ASTInterpreter::operator()(const ast::ForStatement& node) const
     -> ReturnType {
-    bool run_else_block = true;
     visit_(node.init);
     while (true) {
         auto condition = visit_(node.condition);
@@ -717,19 +834,12 @@ auto ASTInterpreter::operator()(const ast::ForStatement& node) const
         try {
             visit_(node.body);
         } catch (const BreakException&) {
-            run_else_block = false;
             break;
         } catch (const ContinueException&) {
         } catch (const ReturnException&) {
-            run_else_block = false;
             break;
         }
         visit_(node.iter);
-    }
-
-    if (run_else_block
-        && !ast::holds_alternative<ast::MonoState>(node.or_else)) {
-        visit_(node.or_else);
     }
 
     return return_value_and_reset_();
@@ -744,7 +854,6 @@ auto ASTInterpreter::operator()(const ast::RangeBasedForStatement& node) const
 
 auto ASTInterpreter::operator()(const ast::WhileStatement& node) const
     -> ReturnType {
-    bool run_else_block = true;
     while (true) {
         auto condition = visit_(node.condition);
         if (!check_branch_condition_(condition)) {
@@ -753,19 +862,11 @@ auto ASTInterpreter::operator()(const ast::WhileStatement& node) const
         try {
             visit_(node.body);
         } catch (const BreakException&) {
-            run_else_block = false;
             break;
         } catch (const ContinueException&) {
-            continue;
         } catch (const ReturnException&) {
-            run_else_block = false;
             break;
         }
-    }
-
-    if (run_else_block
-        && !ast::holds_alternative<ast::MonoState>(node.or_else)) {
-        visit_(node.or_else);
     }
 
     return return_value_and_reset_();
@@ -816,12 +917,14 @@ auto ASTInterpreter::operator()(const ast::Entry& node) const -> ReturnType {
 
 auto ASTInterpreter::execute_bin_op_(ast::BinOpType op, BoxedValue&& left,
                                      BoxedValue&& right) const -> ReturnType {
-    if (!ast::holds_any_of<int64_t, uint64_t, double, String>(left)) {
+    if (!ast::holds_any_of<int64_t, uint64_t, double, String,
+                           Vector<BoxedValue>>(left)) {
         fmt::print("--------1 {}, {}\n", static_cast<int32_t>(op),
                    left.which());
         return {};
     }
-    if (!ast::holds_any_of<int64_t, uint64_t, double, String>(right)) {
+    if (!ast::holds_any_of<int64_t, uint64_t, double, String,
+                           Vector<BoxedValue>>(right)) {
         fmt::print("--------2 {}, {}\n", static_cast<int32_t>(op),
                    right.which());
         return {};
@@ -865,6 +968,18 @@ auto ASTInterpreter::execute_bin_op_(ast::BinOpType op, BoxedValue&& left,
             auto* lhs = boost::get<String>(&a);
             auto* rhs = boost::get<String>(&b);
             return String {lhs->value + rhs->value};
+        } else if (type == ast::BinOpType::kAdd
+                   && ast::holds_alternative<Vector<BoxedValue>>(a)
+                   && ast::holds_alternative<Vector<BoxedValue>>(b)) {
+            auto* lhs = boost::get<Vector<BoxedValue>>(&a);
+            auto* rhs = boost::get<Vector<BoxedValue>>(&b);
+
+            auto output = Vector<BoxedValue> {};
+            output.reserve(lhs->size() + rhs->size());
+            std::copy(lhs->begin(), lhs->end(), std::back_inserter(output));
+            std::copy(rhs->begin(), rhs->end(), std::back_inserter(output));
+
+            return output;
         }
 
         return {};

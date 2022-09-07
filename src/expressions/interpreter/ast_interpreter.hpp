@@ -47,6 +47,36 @@ public:
     using runtime_error::runtime_error;
 };
 
+struct Ellipsis {
+    bool operator==(const Ellipsis&) const = default;
+    bool operator!=(const Ellipsis&) const = default;
+
+    template<typename T>
+    bool operator==(const T&) const {
+        return false;
+    }
+    template<typename T>
+    bool operator!=(const T&) const {
+        return false;
+    }
+    template<typename T>
+    bool operator<(const T&) const {
+        return false;
+    }
+    template<typename T>
+    bool operator<=(const T&) const {
+        return false;
+    }
+    template<typename T>
+    bool operator>(const T&) const {
+        return false;
+    }
+    template<typename T>
+    bool operator>=(const T&) const {
+        return false;
+    }
+};
+
 struct Null {
     bool operator==(const Null&) const = default;
     bool operator!=(const Null&) const = default;
@@ -284,7 +314,7 @@ using BoxedValue = boost::make_recursive_variant<
     Null, bool, int64_t, uint64_t, double, Name, String, Date, DateRange, Code,
     Lambda, Function, Tuple<boost::recursive_variant_>,
     Vector<boost::recursive_variant_>, Set<boost::recursive_variant_>,
-    Map<boost::recursive_variant_, boost::recursive_variant_>>::type;
+    Map<boost::recursive_variant_, boost::recursive_variant_>, Ellipsis>::type;
 
 class ASTInterpreter : public boost::static_visitor<BoxedValue> {
 public:
@@ -322,6 +352,7 @@ private:
 public:
     ReturnType operator()(const ast::MonoState& node) const;
 
+    ReturnType operator()(const ast::Ellipsis& node) const;
     ReturnType operator()(const ast::Null& node) const;
     ReturnType operator()(bool value) const;
 
@@ -353,6 +384,8 @@ public:
     ReturnType operator()(const ast::Argument& node) const;
     ReturnType operator()(const ast::KeywordArgument& node) const;
 
+    ReturnType operator()(const ast::Subscript& node) const;
+
     ReturnType operator()(const ast::UnaryOp& node) const;
     ReturnType operator()(const ast::BoolOp& node) const;
 
@@ -364,6 +397,7 @@ public:
     ReturnType operator()(const ast::ReturnStatement& node) const;
     ReturnType operator()(const ast::StatementList& node) const;
 
+    ReturnType operator()(const ast::ExternFunctionDecl& node) const;
     ReturnType operator()(const ast::FunctionDef& node) const;
 
     ReturnType operator()(const ast::IfStatement& node) const;

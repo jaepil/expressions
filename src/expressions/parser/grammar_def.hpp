@@ -66,6 +66,8 @@ using compound_statement_type
     = rule<struct compound_statement_class, ast::Value>;
 using import_package_type
     = rule<struct import_package_class, ast::ImportPackage>;
+using extern_function_decl_type
+    = rule<struct extern_function_decl_class, ast::ExternFunctionDecl>;
 using function_def_type = rule<struct function_def_class, ast::FunctionDef>;
 using if_statement_type = rule<struct if_statement_class, ast::IfStatement>;
 using for_statement_type = rule<struct for_statement_class, ast::Value>;
@@ -119,12 +121,13 @@ using bin_op_exponential_expr_type
     = rule<struct bin_op_exponential_expr_class, ast::Value>;
 
 using primary_type = rule<struct primary_class, ast::Value>;
-using call_type = rule<struct call_class, ast::Call>;
+using subscript_type = rule<struct subscript_class, ast::Subscript>;
 using argument_type = rule<struct argument_class, ast::Argument>;
 using keyword_argument_type
     = rule<struct keyword_argument_class, ast::KeywordArgument>;
 using argument_list_type
     = rule<struct argument_list_class, std::vector<ast::Value>>;
+using call_type = rule<struct call_class, ast::Call>;
 
 using atom_type = rule<struct atom_class, ast::Value>;
 using numbers_type = rule<struct numbers_class, ast::Value>;
@@ -146,6 +149,8 @@ static const statement_type statement {"statement"};
 
 static const compound_statement_type compound_statement {"compound_statement"};
 static const import_package_type import_package {"import_package"};
+static const extern_function_decl_type extern_function_decl {
+    "extern_function_decl"};
 static const function_def_type function_def {"function_def"};
 static const if_statement_type if_statement {"if_statement"};
 static const for_statement_type for_statement {"for_statement"};
@@ -197,6 +202,7 @@ static const call_type call {"call"};
 static const argument_type argument {"argument"};
 static const keyword_argument_type keyword_argument {"keyword_argument"};
 static const argument_list_type argument_list {"argument_list"};
+static const subscript_type subscript {"subscript"};
 
 static const atom_type atom {"atom"};
 static const numbers_type numbers {"numbers"};
@@ -289,6 +295,10 @@ static const auto reserved = x3::symbols<std::string_view> {
     "not",
 
     "as",
+
+    "true",
+    "false",
+    "null",
 };
 
 // + - && || ! ( ) { } [ ] ^ " ~ * ? : \ / , ;
@@ -323,36 +333,38 @@ static const auto keywords
     ;
 
 static const auto entry_def
-    = &x3::lit("package") >> package_name >> -statement_list
+    = &x3::lit("package") >> package_name >> statement_list
     ;
 
 static const auto package_name_def
     = "package" > id > *x3::lit(';')
     ;
 
-static const auto compound_stmt_lookahead
-    = x3::lit("import")
-    | x3::lit("def")
-    | x3::lit("if")
-    | x3::lit("for")
-    | x3::lit("while")
-    ;
+// static const auto compound_stmt_lookahead
+//     = x3::lit("import")
+//     | x3::lit("def")
+//     | x3::lit("if")
+//     | x3::lit("for")
+//     | x3::lit("while")
+//     ;
 
 static const auto statement_def
-    = &compound_stmt_lookahead >> compound_statement
-    | simple_statement
+    = compound_statement
+    | simple_statement >> *x3::lit(';')
     ;
 
 static const auto statement_list_def
-    = statement % *x3::lit(';')
+    = *statement
+    | *x3::lit(';')
     ;
 
 static const auto compound_statement_def
-    = &x3::lit("import") >> import_package
-    | &x3::lit("def") >> function_def
-    | &x3::lit("if") >> if_statement
-    | &x3::lit("for") >> for_statement
-    | &x3::lit("while") >> while_statement
+    = import_package
+    // | extern_function_decl
+    | function_def
+    | if_statement
+    | for_statement
+    | while_statement
     ;
 
 static const auto statement_block
@@ -368,8 +380,28 @@ static const auto import_package_def
     = "import" > id > *x3::lit(';')
     ;
 
+static const auto decorators
+    = +('@' > id)
+    ;
+
+static const auto extern_function_decl_raw
+    = x3::distinct("extern") >> x3::distinct("def") >> id
+        >> x3::confix('(', ')')[-argument_list] >> -("->" >> id)
+    ;
+
+static const auto extern_function_decl_def
+    = decorators > extern_function_decl_raw
+    | x3::attr(std::vector<ast::Name> {}) >> extern_function_decl_raw
+    ;
+
+static const auto function_def_raw
+    = x3::distinct("def") >> id
+        >> x3::confix('(', ')')[-argument_list] >> statement_block
+    ;
+
 static const auto function_def_def
-    = "def" > id > x3::confix('(', ')')[-argument_list] > statement_block
+    = decorators > function_def_raw
+    | x3::attr(std::vector<ast::Name> {}) >> function_def_raw
     ;
 
 static const auto if_statement_def
@@ -397,7 +429,7 @@ static const auto for_iteration_def
 static const auto classic_for_statement_def
     = "for" >> x3::confix('(', ')')[
         for_init >> ';' >> for_condition >> ';' >> for_iteration
-    ] >> statement_body >> -(x3::distinct("else") >> statement_body)
+    ] >> statement_body
     ;
 
 static const auto for_target_def
@@ -414,12 +446,11 @@ static const auto for_targets_def
 static const auto range_based_for_statement_def
     = "for" >> x3::confix('(', ')')[
         for_targets >> ':' >> expression
-    ] >> statement_body >> -(x3::distinct("else") >> statement_body)
+    ] >> statement_body
     ;
 
 static const auto while_statement_def
     = "while" >> x3::confix('(', ')')[expression] >> statement_body
-        >> -(x3::distinct("else") >> statement_body)
     ;
 
 static const auto simple_statement_def
@@ -431,6 +462,7 @@ static const auto simple_statement_def
     | pass_statement
     | break_statement
     | continue_statement
+    | statement_block
     ;
 
 static const auto assign_statement_def
@@ -547,13 +579,15 @@ static const auto unary_expr_def
     ;
 
 static const auto primary_def
-    = &(id >> '(') >> call
+    = !keywords >> &(id >> '(') >> call
+    | subscript
     | &(unary_op | unary_op_not) >> unary_expr
     | atom
     ;
 
 static const auto argument_def
-    = (&x3::lit('(') >> lambda_expr) | unary_expr
+    = (&x3::lit('(') >> lambda_expr)
+    | unary_expr
     ;
 
 static const auto keyword_argument_def
@@ -569,6 +603,10 @@ static const auto argument_list_def
 
 static const auto call_def
     = id >> x3::confix('(', ')')[-argument_list] >> !x3::lit("=>")
+    ;
+
+static const auto subscript_def
+    = id >> x3::confix('[', ']')[expression]
     ;
 
 static const auto numbers_def
@@ -679,9 +717,10 @@ static const auto atom_def
         | id
         | null
         | boolean
-        | (&number_lookahead >> numbers)
         | quoted_string
+        | (&number_lookahead >> numbers)
         | (&sequence_lookahead >> sequence)
+        | x3::distinct("...") >> x3::attr(ast::Ellipsis {})
     )
     ;
 
@@ -743,21 +782,25 @@ static const auto set_def
 static const auto skipper
     = x3::unicode::space
     | (!x3::lit("//=") >> "//" >> x3::seek[x3::eol | x3::eoi])
+    | ("/*" >> x3::seek["*/"])
     ;
 // clang-format on
 
-BOOST_SPIRIT_DEFINE(
-    entry, package_name, compound_statement, simple_statement, import_package,
-    function_def, if_statement, for_statement, for_init, for_condition,
-    for_iteration, classic_for_statement, for_target, for_targets,
-    range_based_for_statement, while_statement, statement, assign_statement,
-    lazy_assign_statement, aug_assign_statement, return_statement,
-    pass_statement, break_statement, continue_statement, statement_list,
-    expression, lambda_expr, bool_expr, bool_expr_or, bool_expr_and, unary_expr,
-    compare_ops, compare_op_expr, bin_op_expr, bin_op_additive_expr,
-    bin_op_multiplicative_expr, bin_op_exponential_expr, primary, call,
-    argument, keyword_argument, argument_list, atom, numbers, id, quoted_string,
-    sequence, group, tuple, list, dict, dict_item, set)
+BOOST_SPIRIT_DEFINE(entry, package_name, compound_statement, simple_statement,
+                    import_package, extern_function_decl, function_def,
+                    if_statement, for_statement, for_init, for_condition,
+                    for_iteration, classic_for_statement, for_target,
+                    for_targets, range_based_for_statement, while_statement,
+                    statement, assign_statement, lazy_assign_statement,
+                    aug_assign_statement, return_statement, pass_statement,
+                    break_statement, continue_statement, statement_list,
+                    expression, lambda_expr, bool_expr, bool_expr_or,
+                    bool_expr_and, unary_expr, compare_ops, compare_op_expr,
+                    bin_op_expr, bin_op_additive_expr,
+                    bin_op_multiplicative_expr, bin_op_exponential_expr,
+                    primary, call, subscript, argument, keyword_argument,
+                    argument_list, atom, numbers, id, quoted_string, sequence,
+                    group, tuple, list, dict, dict_item, set)
 
 }    // namespace expressions::parser
 

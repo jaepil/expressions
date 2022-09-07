@@ -42,6 +42,9 @@ public:
         return static_cast<const T&>(*this);
     }
 
+    ReturnType operator()(const Ellipsis& node) const {
+        return get().return_(node);
+    }
     ReturnType operator()(const Null& node) const {
         return get().return_(node);
     }
@@ -100,6 +103,10 @@ public:
         return get().return_(node);
     }
 
+    ReturnType operator()(const Subscript& node) const {
+        return get().return_(node);
+    }
+
     ReturnType operator()(const CompareOp& node) const {
         return get().return_(node);
     }
@@ -138,6 +145,9 @@ public:
         return get().return_(node);
     }
 
+    ReturnType operator()(const ExternFunctionDecl& node) const {
+        return get().return_(node);
+    }
     ReturnType operator()(const FunctionDef& node) const {
         return get().return_(node);
     }
@@ -213,6 +223,9 @@ public:
     }
 
     ReturnType operator()(const MonoState& node) const {
+        return ReturnType {node};
+    }
+    ReturnType operator()(const Ellipsis& node) const {
         return ReturnType {node};
     }
     ReturnType operator()(const Null& node) const {
@@ -327,6 +340,15 @@ public:
         return ReturnType {KeywordArgument {node.name, visit(node.arg)}};
     }
 
+    ReturnType operator()(const Subscript& node) const {
+        return ReturnType {
+            Subscript {
+                visit(node.name),
+                visit(node.expr),
+            },
+        };
+    }
+
     ReturnType operator()(const UnaryOp& node) const {
         auto value = visit(node.operand);
 
@@ -393,15 +415,50 @@ public:
         return ReturnType {StatementList {std::move(new_stmts)}};
     }
 
-    ReturnType operator()(const FunctionDef& node) const {
+    ReturnType operator()(const ExternFunctionDecl& node) const {
+        auto decorators = std::vector<Name> {};
+        decorators.reserve(node.decorators.size());
+        for (const auto& d : node.decorators) {
+            decorators.emplace_back(visit<Name>(d));
+        }
+
         auto params = std::vector<Value> {};
         params.reserve(node.params.size());
         for (const auto& p : node.params) {
             params.emplace_back(visit(p));
         }
 
-        return ReturnType {FunctionDef {visit<Name>(node.name),
-                                        std::move(params), visit(node.body)}};
+        return ReturnType {
+            ExternFunctionDecl {
+                std::move(decorators),
+                visit<Name>(node.name),
+                std::move(params),
+                visit<Name>(node.return_type),
+            },
+        };
+    }
+
+    ReturnType operator()(const FunctionDef& node) const {
+        auto decorators = std::vector<Name> {};
+        decorators.reserve(node.decorators.size());
+        for (const auto& d : node.decorators) {
+            decorators.emplace_back(visit<Name>(d));
+        }
+
+        auto params = std::vector<Value> {};
+        params.reserve(node.params.size());
+        for (const auto& p : node.params) {
+            params.emplace_back(visit(p));
+        }
+
+        return ReturnType {
+            FunctionDef {
+                std::move(decorators),
+                visit<Name>(node.name),
+                std::move(params),
+                visit(node.body),
+            },
+        };
     }
 
     ReturnType operator()(const IfStatement& node) const {
@@ -409,18 +466,31 @@ public:
                                         visit(node.or_else)}};
     }
     ReturnType operator()(const ForStatement& node) const {
-        return ReturnType {ForStatement {
-            visit(node.init), visit(node.condition), visit(node.iter),
-            visit(node.body), visit(node.or_else)}};
+        return ReturnType {
+            ForStatement {
+                visit(node.init),
+                visit(node.condition),
+                visit(node.iter),
+                visit(node.body),
+            },
+        };
     }
     ReturnType operator()(const RangeBasedForStatement& node) const {
         return ReturnType {
-            RangeBasedForStatement {visit(node.target), visit(node.iter),
-                                    visit(node.body), visit(node.or_else)}};
+            RangeBasedForStatement {
+                visit(node.target),
+                visit(node.iter),
+                visit(node.body),
+            },
+        };
     }
     ReturnType operator()(const WhileStatement& node) const {
-        return ReturnType {WhileStatement {
-            visit(node.condition), visit(node.body), visit(node.or_else)}};
+        return ReturnType {
+            WhileStatement {
+                visit(node.condition),
+                visit(node.body),
+            },
+        };
     }
 
     ReturnType operator()(const Pass& node) const {

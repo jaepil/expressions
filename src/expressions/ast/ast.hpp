@@ -27,6 +27,7 @@ using ::expressions::support::boost::get;
 using ::expressions::support::boost::get_if;
 
 struct MonoState {};
+struct Ellipsis {};
 struct Null {};
 struct Entry;
 struct ImportPackage;
@@ -37,6 +38,7 @@ struct LazyAssignStatement;
 struct AugAssignStatement;
 struct ReturnStatement;
 struct StatementList;
+struct ExternFunctionDecl;
 struct FunctionDef;
 struct IfStatement;
 struct ForStatement;
@@ -57,6 +59,7 @@ struct BinOpIntermediate;
 struct Call;
 struct Argument;
 struct KeywordArgument;
+struct Subscript;
 
 struct Name;
 struct QuotedString;
@@ -114,10 +117,11 @@ enum class BinOpType : int32_t {
     kPow,
 };
 
-using AtomType = x3::variant<MonoState, Null, bool, int64_t, uint64_t, double,
-                             x3::forward_ast<Name>, x3::forward_ast<String>,
-                             x3::forward_ast<QuotedString>,
-                             x3::forward_ast<Date>, x3::forward_ast<DateRange>>;
+using AtomType
+    = x3::variant<MonoState, Ellipsis, Null, bool, int64_t, uint64_t, double,
+                  x3::forward_ast<Name>, x3::forward_ast<String>,
+                  x3::forward_ast<QuotedString>, x3::forward_ast<Date>,
+                  x3::forward_ast<DateRange>>;
 
 using CollectionType
     = x3::variant<MonoState, x3::forward_ast<Tuple>, x3::forward_ast<List>,
@@ -130,15 +134,16 @@ using ArithmeticType
 using ExpressionType
     = x3::variant<MonoState, x3::forward_ast<Call>, x3::forward_ast<Argument>,
                   x3::forward_ast<KeywordArgument>, x3::forward_ast<Lambda>,
-                  x3::forward_ast<Expression>>;
+                  x3::forward_ast<Subscript>, x3::forward_ast<Expression>>;
 
 using StatementType = x3::variant<
     MonoState, x3::forward_ast<AssignStatement>,
     x3::forward_ast<LazyAssignStatement>, x3::forward_ast<AugAssignStatement>,
-    x3::forward_ast<ReturnStatement>, x3::forward_ast<FunctionDef>,
-    x3::forward_ast<IfStatement>, x3::forward_ast<ForStatement>,
-    x3::forward_ast<RangeBasedForStatement>, x3::forward_ast<WhileStatement>,
-    x3::forward_ast<Pass>, x3::forward_ast<Break>, x3::forward_ast<Continue>,
+    x3::forward_ast<ReturnStatement>, x3::forward_ast<ExternFunctionDecl>,
+    x3::forward_ast<FunctionDef>, x3::forward_ast<IfStatement>,
+    x3::forward_ast<ForStatement>, x3::forward_ast<RangeBasedForStatement>,
+    x3::forward_ast<WhileStatement>, x3::forward_ast<Pass>,
+    x3::forward_ast<Break>, x3::forward_ast<Continue>,
     x3::forward_ast<StatementList>>;
 
 using ValueType
@@ -149,7 +154,7 @@ using Value = x3::variant<
     MonoState,
 
     // Atom
-    Null, bool, int64_t, uint64_t, double, x3::forward_ast<Name>,
+    Ellipsis, Null, bool, int64_t, uint64_t, double, x3::forward_ast<Name>,
     x3::forward_ast<String>, x3::forward_ast<QuotedString>,
     x3::forward_ast<Date>, x3::forward_ast<DateRange>,
 
@@ -164,12 +169,11 @@ using Value = x3::variant<
 
     // Expression
     x3::forward_ast<Call>, x3::forward_ast<Argument>,
-    x3::forward_ast<KeywordArgument>,
-
-    x3::forward_ast<Lambda>, x3::forward_ast<Expression>,
+    x3::forward_ast<KeywordArgument>, x3::forward_ast<Lambda>,
+    x3::forward_ast<Subscript>, x3::forward_ast<Expression>,
 
     // Function
-    x3::forward_ast<FunctionDef>,
+    x3::forward_ast<ExternFunctionDecl>, x3::forward_ast<FunctionDef>,
 
     // Statement
     x3::forward_ast<AssignStatement>, x3::forward_ast<LazyAssignStatement>,
@@ -247,6 +251,11 @@ struct KeywordArgument {
     Value arg;
 };
 
+struct Subscript {
+    Value name {};
+    Value expr {};
+};
+
 struct BoolOp {
     BoolOpType op {BoolOpType::kDefault};
     std::vector<Value> operands;
@@ -316,7 +325,15 @@ struct StatementList {
     std::vector<Value> stmts;
 };
 
+struct ExternFunctionDecl {
+    std::vector<Name> decorators {};
+    Name name {};
+    std::vector<Value> params {};
+    Name return_type {};
+};
+
 struct FunctionDef {
+    std::vector<Name> decorators {};
     Name name {};
     std::vector<Value> params {};
     Value body {};
@@ -333,20 +350,17 @@ struct ForStatement {
     Value condition {};
     Value iter {};
     Value body {};
-    Value or_else {};
 };
 
 struct RangeBasedForStatement {
     Value target {};
     Value iter {};
     Value body {};
-    Value or_else {};
 };
 
 struct WhileStatement {
     Value condition {};
     Value body {};
-    Value or_else {};
 };
 
 struct Pass {};
@@ -386,6 +400,8 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Call, name, args)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Argument, arg)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::KeywordArgument, name, arg)
 
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::Subscript, name, expr)
+
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::BoolOp, op, operands)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::UnaryOp, op, operand)
 
@@ -405,16 +421,18 @@ BOOST_FUSION_ADAPT_STRUCT(expressions::ast::AugAssignStatement, target, op,
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ReturnStatement, expr)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::StatementList, stmts)
 
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::FunctionDef, name, params, body)
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ExternFunctionDecl, decorators,
+                          name, params, return_type)
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::FunctionDef, decorators, name,
+                          params, body)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::IfStatement, condition, body,
                           or_else)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ForStatement, init, condition, iter,
-                          body, or_else)
+                          body)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::RangeBasedForStatement, target,
-                          iter, body, or_else)
-BOOST_FUSION_ADAPT_STRUCT(expressions::ast::WhileStatement, condition, body,
-                          or_else)
+                          iter, body)
+BOOST_FUSION_ADAPT_STRUCT(expressions::ast::WhileStatement, condition, body)
 
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::ImportPackage, path)
 BOOST_FUSION_ADAPT_STRUCT(expressions::ast::PackageName, path)
