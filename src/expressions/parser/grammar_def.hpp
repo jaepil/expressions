@@ -405,7 +405,7 @@ static const auto function_def_def
     ;
 
 static const auto if_statement_def
-    = "if" >> x3::confix('(', ')')[expression] >> statement_body
+    = x3::distinct("if") >> x3::confix('(', ')')[expression] >> statement_body
         >> -(x3::distinct("else") >> statement_body)
     ;
 
@@ -427,7 +427,7 @@ static const auto for_iteration_def
     ;
 
 static const auto classic_for_statement_def
-    = "for" >> x3::confix('(', ')')[
+    = x3::distinct("for") >> x3::confix('(', ')')[
         for_init >> ';' >> for_condition >> ';' >> for_iteration
     ] >> statement_body
     ;
@@ -444,13 +444,14 @@ static const auto for_targets_def
     ;
 
 static const auto range_based_for_statement_def
-    = "for" >> x3::confix('(', ')')[
+    = x3::distinct("for") >> x3::confix('(', ')')[
         for_targets >> ':' >> expression
     ] >> statement_body
     ;
 
 static const auto while_statement_def
-    = "while" >> x3::confix('(', ')')[expression] >> statement_body
+    = x3::distinct("while")
+        >> x3::confix('(', ')')[expression] >> statement_body
     ;
 
 static const auto simple_statement_def
@@ -466,15 +467,15 @@ static const auto simple_statement_def
     ;
 
 static const auto assign_statement_def
-    = id >> '=' >> expression >> *x3::lit(';')
+    = primary >> '=' >> expression >> *x3::lit(';')
     ;
 
 static const auto lazy_assign_statement_def
-    = id >> ":=" >> expression >> *x3::lit(';')
+    = primary >> ":=" >> expression >> *x3::lit(';')
     ;
 
 static const auto aug_assign_statement_def
-    = id >> x3::lexeme[bin_ops >> '='] >> expression >> *x3::lit(';')
+    = primary >> x3::lexeme[bin_ops >> '='] >> expression >> *x3::lit(';')
     ;
 
 static const auto return_statement_def
@@ -586,15 +587,11 @@ static const auto primary_def
     ;
 
 static const auto argument_def
-    = (&x3::lit('(') >> lambda_expr)
-    | unary_expr
+    = expression
     ;
 
 static const auto keyword_argument_def
-    = id >> '=' >> (
-        (&x3::lit('(') >> lambda_expr)
-        | unary_expr
-    )
+    = id >> '=' >> expression
     ;
 
 static const auto argument_list_def

@@ -373,6 +373,11 @@ public:
     ReturnType operator()(const ast::Set& node) const;
 
     ReturnType operator()(const ast::CompareOp& node) const;
+    ReturnType operator()(const ast::CompareOpOperand& node) const {
+        auto name = boost::typeindex::type_id<decltype(node)>().pretty_name();
+        THROW_EXCEPTION(std::runtime_error(fmt::format(
+            "[Interpreter] Cannot execute the AST node type '{}'", name)));
+    }
     ReturnType operator()(const ast::BinOp& node) const;
     ReturnType operator()(const ast::BinOpIntermediate& node) const {
         auto name = boost::typeindex::type_id<decltype(node)>().pretty_name();

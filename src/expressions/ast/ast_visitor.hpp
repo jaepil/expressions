@@ -110,6 +110,9 @@ public:
     ReturnType operator()(const CompareOp& node) const {
         return get().return_(node);
     }
+    ReturnType operator()(const CompareOpOperand& node) const {
+        return get().return_(node);
+    }
     ReturnType operator()(const BinOp& node) const {
         return get().return_(node);
     }
@@ -307,6 +310,11 @@ public:
 
         return ReturnType {CompareOp {std::move(first), std::move(rest)}};
     }
+    ReturnType operator()(const CompareOpOperand& node) const {
+        (void)node;
+
+        return {};
+    }
     ReturnType operator()(const BinOp& node) const {
         return ReturnType {
             BinOp {visit(node.left), node.op, visit(node.right)}};
@@ -403,7 +411,11 @@ public:
             AugAssignStatement {std::move(target), node.op, std::move(expr)}};
     }
     ReturnType operator()(const ReturnStatement& node) const {
-        return ReturnType {ReturnStatement {visit(node.expr)}};
+        if (node.expr.has_value()) {
+            return ReturnType {ReturnStatement {visit(node.expr.value())}};
+        } else {
+            return ReturnType {ReturnStatement {}};
+        }
     }
     ReturnType operator()(const StatementList& node) const {
         auto new_stmts = std::vector<Value> {};

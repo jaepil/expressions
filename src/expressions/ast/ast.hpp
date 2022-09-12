@@ -11,6 +11,7 @@
 #include <expressions/support/boost/variant.hpp>
 
 #include <boost/fusion/adapted.hpp>
+#include <boost/optional.hpp>
 
 #include <string>
 #include <vector>
@@ -53,6 +54,7 @@ struct Lambda;
 struct BoolOp;
 struct UnaryOp;
 struct CompareOp;
+struct CompareOpOperand;
 struct BinOp;
 struct BinOpIntermediate;
 
@@ -129,7 +131,8 @@ using CollectionType
 
 using ArithmeticType
     = x3::variant<MonoState, x3::forward_ast<BoolOp>, x3::forward_ast<UnaryOp>,
-                  x3::forward_ast<CompareOp>, x3::forward_ast<BinOp>>;
+                  x3::forward_ast<CompareOp>, x3::forward_ast<CompareOpOperand>,
+                  x3::forward_ast<BinOp>>;
 
 using ExpressionType
     = x3::variant<MonoState, x3::forward_ast<Call>, x3::forward_ast<Argument>,
@@ -164,8 +167,8 @@ using Value = x3::variant<
 
     // Arithmetic
     x3::forward_ast<BoolOp>, x3::forward_ast<UnaryOp>,
-    x3::forward_ast<CompareOp>, x3::forward_ast<BinOp>,
-    x3::forward_ast<BinOpIntermediate>,
+    x3::forward_ast<CompareOp>, x3::forward_ast<CompareOpOperand>,
+    x3::forward_ast<BinOp>, x3::forward_ast<BinOpIntermediate>,
 
     // Expression
     x3::forward_ast<Call>, x3::forward_ast<Argument>,
@@ -318,7 +321,7 @@ struct AugAssignStatement {
 };
 
 struct ReturnStatement {
-    Value expr {};
+    boost::optional<Value> expr {};
 };
 
 struct StatementList {
